@@ -70,30 +70,30 @@ func IsStringInList(value string, list []string) bool {
 	return false
 }
 
-func ProjectFilter(item string, filter ProjectRegexFilter) bool {
+func ProjectFilter(item string, filter ProjectRegexFilter) (result bool, err error) {
 	// If the regexp is not defined, we don't filter the project
 	if filter.Includes == "" && filter.Excludes == "" {
-		return true
+		return true, nil
 	}
 
 	// Compile the regular expressions
 	var patternInclude, patternExclude *regexp.Regexp
 	if filter.Includes != "" {
-		patternInclude = regexp.MustCompile(filter.Includes)
+		patternInclude, err = regexp.Compile(filter.Includes)
 	}
 	if filter.Excludes != "" {
-		patternExclude = regexp.MustCompile(filter.Excludes)
+		patternExclude, err = regexp.Compile(filter.Excludes)
 	}
 
 	// Check if the item matches the include and exclude patterns
 	if patternInclude != nil && !patternInclude.MatchString(item) {
-		return false
+		return false, nil
 	}
 	if patternExclude != nil && patternExclude.MatchString(item) {
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }
 
 func CreateProjectFilter(includes string, excludes string) ProjectRegexFilter {

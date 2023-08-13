@@ -147,7 +147,7 @@ func genAtlantisYaml(ccmd *cobra.Command, args []string) error {
 		ProjectsPatternDetector: atlantisProjectsPatternDetector,
 	}
 
-	err = atlantis.GenAtlantisYaml(ghParams, atlantisParams)
+	err = atlantis.GenerateAtlantisYAML(ghParams, atlantisParams)
 	return err
 }
 
