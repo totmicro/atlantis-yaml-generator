@@ -5,11 +5,9 @@ import (
 	"strings"
 )
 
-var singleWorkspacePatternDetector = "main.tf"
-
-func singleWorkspaceWorkflowFilter(info os.FileInfo, path string) bool {
+func singleWorkspaceWorkflowFilter(info os.FileInfo, path, patternDetector string) bool {
 	return !info.IsDir() &&
-		info.Name() == singleWorkspacePatternDetector &&
+		info.Name() == patternDetector &&
 		!strings.Contains(path, ".terraform")
 }
 

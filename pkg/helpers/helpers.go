@@ -1,8 +1,10 @@
 package helpers
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -53,10 +55,6 @@ func WriteFile(content, filePath string) error {
 	return err
 }
 
-func GetRelativePath(path, basePath string) (string, error) {
-	return filepath.Rel(basePath, filepath.Dir(path))
-}
-
 func TrimFileExtension(filename string) string {
 	return strings.TrimSuffix(filename, filepath.Ext(filename))
 }
@@ -101,4 +99,25 @@ func CreateProjectFilter(includes string, excludes string) ProjectRegexFilter {
 		Excludes: excludes,
 		Includes: includes,
 	}
+}
+
+func CheckRequiredArgs(args interface{}) (err error) {
+	var missingParams []string
+	// Get the value of the argument
+	argsValue := reflect.ValueOf(args)
+
+	// Iterate over the fields
+	argsType := argsValue.Type()
+	for i := 0; i < argsType.NumField(); i++ {
+		field := argsType.Field(i)
+		fieldValue := argsValue.Field(i)
+		if fieldValue.Interface() == "" {
+			missingParams = append(missingParams, field.Name)
+		}
+	}
+	if len(missingParams) > 0 {
+		err = fmt.Errorf("Missing required parameters: %s", strings.Join(missingParams, ", "))
+		return err
+	}
+	return err
 }

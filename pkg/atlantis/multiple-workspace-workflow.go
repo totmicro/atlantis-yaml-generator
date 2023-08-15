@@ -6,18 +6,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/totmicro/atlantis-yaml-generator/pkg/github"
 	"github.com/totmicro/atlantis-yaml-generator/pkg/helpers"
 )
 
 const tfvarsExtension = ".tfvars"
 
-var multiWorkspacePatternDetector = "workspace_vars"
-
-func multiWorkspaceGetProjectScope(relPath string, changedFiles []string) string {
+func multiWorkspaceGetProjectScope(relPath, patternDetector string, changedFiles []string) string {
 	for _, file := range changedFiles {
 		if strings.HasPrefix(file, fmt.Sprintf("%s/", relPath)) &&
-			!strings.Contains(file, multiWorkspacePatternDetector) {
+			!strings.Contains(file, patternDetector) {
 			return "crossWorkspace"
 		}
 	}
@@ -39,20 +36,22 @@ func multiWorkspaceGenWorkspaceList(relPath string, changedFiles []string, scope
 	return workspaceList, err
 }
 
-func multiWorkspaceDetectProjectWorkspaces(gh github.GithubRequest, foldersList []ProjectFolder) ([]ProjectFolder, error) {
-	changedFiles, _ := github.GetChangedFiles(gh)
+func multiWorkspaceDetectProjectWorkspaces(changedFiles []string, foldersList []ProjectFolder, patternDetector string) (updatedFolderList []ProjectFolder, err error) {
 
 	for i := range foldersList {
-		scope := multiWorkspaceGetProjectScope(foldersList[i].Path, changedFiles)
-		workspaceList, _ := multiWorkspaceGenWorkspaceList(foldersList[i].Path, changedFiles, scope)
+		scope := multiWorkspaceGetProjectScope(foldersList[i].Path, patternDetector, changedFiles)
+		workspaceList, err := multiWorkspaceGenWorkspaceList(foldersList[i].Path, changedFiles, scope)
+		if err != nil {
+			return foldersList, err
+		}
 		foldersList[i].WorkspaceList = workspaceList
 	}
 	return foldersList, nil
 }
 
-func multiWorkspaceWorkflowFilter(info os.FileInfo, path string) bool {
+func multiWorkspaceWorkflowFilter(info os.FileInfo, path, patternDetector string) bool {
 	return info.IsDir() &&
-		info.Name() == "workspace_vars" &&
+		info.Name() == patternDetector &&
 		!strings.Contains(path, ".terraform")
 
 }

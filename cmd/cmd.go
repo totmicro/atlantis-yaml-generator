@@ -15,13 +15,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	defaultOutputFile        = "atlantis.yaml"
-	defaultAutomerge         = "false"
-	defaultParallelPlan      = "true"
-	defaultParallelApply     = "true"
-	defaultAtlantisTfRootDir = "./"
-)
+type RequiredArgs struct {
+	GhToken          string
+	BaseRepoOwner    string
+	BaseRepoName     string
+	PullNum          string
+	AtlantisWorkflow string
+}
 
 var (
 	rootCmd = &cobra.Command{
@@ -70,90 +70,88 @@ Alternatively, you can set this parameter using GH_TOKEN environment variable.`)
 		os.Exit(1)
 	}
 	os.Exit(0)
+
 }
 
 func genAtlantisYaml(ccmd *cobra.Command, args []string) error {
 	err := errors.New("")
 	// Read flags and environment variables
-	atlantisAutomerge := helpers.GetFlagOrEnv(ccmd, "atlantis-automerge", "ATLANTIS_AUTOMERGE", defaultAutomerge)
-	atlantisParallelApply := helpers.GetFlagOrEnv(ccmd, "atlantis-parallel-apply", "ATLANTIS_PARALLEL_APPLY", defaultParallelApply)
-	atlantisParallelPlan := helpers.GetFlagOrEnv(ccmd, "atlantis-parallel-plan", "ATLANTIS_PARALLEL_PLAN", defaultParallelPlan)
-	atlantisTfRootDir := helpers.GetFlagOrEnv(ccmd, "atlantis-tf-root-dir", "ATLANTIS_TF_ROOT_DIR", defaultAtlantisTfRootDir)
-	atlantisOutputFile := helpers.GetFlagOrEnv(ccmd, "output-file", "OUTPUT_FILE", defaultOutputFile)
+	atlantisAutomerge := helpers.GetFlagOrEnv(ccmd, "atlantis-automerge", "ATLANTIS_AUTOMERGE", atlantis.DefaultAutomerge)
+	atlantisParallelApply := helpers.GetFlagOrEnv(ccmd, "atlantis-parallel-apply", "ATLANTIS_PARALLEL_APPLY", atlantis.DefaultParallelApply)
+	atlantisParallelPlan := helpers.GetFlagOrEnv(ccmd, "atlantis-parallel-plan", "ATLANTIS_PARALLEL_PLAN", atlantis.DefaultParallelPlan)
+	atlantisTfRootDir := helpers.GetFlagOrEnv(ccmd, "atlantis-tf-root-dir", "ATLANTIS_TF_ROOT_DIR", atlantis.DefaultAtlantisTfRootDir)
+	atlantisOutputFile := helpers.GetFlagOrEnv(ccmd, "output-file", "OUTPUT_FILE", atlantis.DefaultOutputFile)
 	atlantisWorkflow := helpers.GetFlagOrEnv(ccmd, "atlantis-workflow", "ATLANTIS_WORKFLOW", "")
 	atlantisWhenModified := helpers.GetFlagOrEnv(ccmd, "atlantis-when-modified", "ATLANTIS_WHEN_MODIFIED", "")
 	atlantisExcludedProjects := helpers.GetFlagOrEnv(ccmd, "atlantis-excluded-projects", "ATLANTIS_EXCLUDED_PROJECTS", "")
 	atlantisIncludedProjects := helpers.GetFlagOrEnv(ccmd, "atlantis-included-projects", "ATLANTIS_INCLUDED_PROJECTS", "")
 	atlantisProjectsPatternDetector := helpers.GetFlagOrEnv(ccmd, "atlantis-projects-pattern-detector", "ATLANTIS_PROJECTS_PATTERN_DETECTOR", "")
 	pullNum := helpers.GetFlagOrEnv(ccmd, "pull-num", "PULL_NUM", "")
-	ghRepo := helpers.GetFlagOrEnv(ccmd, "base-repo-name", "BASE_REPO_NAME", "")
-	ghRepoOwner := helpers.GetFlagOrEnv(ccmd, "base-repo-owner", "BASE_REPO_OWNER", "")
+	baseRepoName := helpers.GetFlagOrEnv(ccmd, "base-repo-name", "BASE_REPO_NAME", "")
+	baseRepoOwner := helpers.GetFlagOrEnv(ccmd, "base-repo-owner", "BASE_REPO_OWNER", "")
 	ghToken := helpers.GetFlagOrEnv(ccmd, "gh-token", "GH_TOKEN", "")
 
-	// Validate required parameters
-	var requiredArgs = []string{"gh-token", "base-repo-owner", "base-repo-name", "pull-num", "atlantis-workflow"}
-	var missingArgs []string
+	// Validate required parameter
+	var reqArgs = RequiredArgs{
+		GhToken:          ghToken,
+		BaseRepoOwner:    baseRepoOwner,
+		BaseRepoName:     baseRepoName,
+		PullNum:          pullNum,
+		AtlantisWorkflow: atlantisWorkflow,
+	}
 
-	for _, arg := range requiredArgs {
-		switch arg {
-		case "gh-token":
-			if ghToken == "" {
-				missingArgs = append(missingArgs, "gh-token")
-			}
-		case "base-repo-owner":
-			if ghRepoOwner == "" {
-				missingArgs = append(missingArgs, "base-repo-owner")
-			}
-		case "base-repo-name":
-			if ghRepo == "" {
-				missingArgs = append(missingArgs, "base-repo-name")
-			}
-		case "pull-num":
-			if pullNum == "" {
-				missingArgs = append(missingArgs, "pull-num")
-			}
-		case "atlantis-workflow":
-			if atlantisWorkflow == "" {
-				missingArgs = append(missingArgs, "atlantis-workflow")
-			}
-		}
+	err = helpers.CheckRequiredArgs(reqArgs)
+	if err != nil {
+		fmt.Println("Run", ccmd.CommandPath(), "--help for more information.")
+		return err
 	}
-	if len(missingArgs) > 0 {
-		errorMsg := fmt.Sprintf("missing required parameters: %s", strings.Join(missingArgs, ", "))
-		fmt.Println("Use --help for more information.")
-		return errors.New(errorMsg)
-	}
-	// Parse the WhenModified list
-	atlantisWhenModifiedList := parseWhenModifiedList(atlantisWhenModified)
+
+	// Define the WhenModified list
+	atlantisWhenModifiedList := defineWhenModifiedList(atlantisWhenModified)
+
+	// Define pattern detector
+	atlantisProjectsPatternDetector = defineProjectPatternDetector(atlantisProjectsPatternDetector, atlantisWorkflow)
 
 	// Create GitHub and Atlantis parameters
 	ghParams := github.GithubRequest{
-		Repo:              ghRepo,
-		Owner:             ghRepoOwner,
+		Repo:              baseRepoName,
+		Owner:             baseRepoOwner,
 		PullRequestNumber: pullNum,
 		AuthToken:         ghToken,
 	}
 
 	atlantisParams := atlantis.Parameters{
-		Automerge:               atlantisAutomerge,
-		ParallelApply:           atlantisParallelApply,
-		ParallelPlan:            atlantisParallelPlan,
-		TfRootDir:               atlantisTfRootDir,
-		OutputFile:              atlantisOutputFile,
-		Workflow:                atlantisWorkflow,
-		WhenModified:            atlantisWhenModifiedList,
-		ExcludedProjects:        atlantisExcludedProjects,
-		IncludedProjects:        atlantisIncludedProjects,
-		ProjectsPatternDetector: atlantisProjectsPatternDetector,
+		Automerge:        atlantisAutomerge,
+		ParallelApply:    atlantisParallelApply,
+		ParallelPlan:     atlantisParallelPlan,
+		TfRootDir:        atlantisTfRootDir,
+		OutputFile:       atlantisOutputFile,
+		Workflow:         atlantisWorkflow,
+		WhenModified:     atlantisWhenModifiedList,
+		ExcludedProjects: atlantisExcludedProjects,
+		IncludedProjects: atlantisIncludedProjects,
+		PatternDetector:  atlantisProjectsPatternDetector,
 	}
 
 	err = atlantis.GenerateAtlantisYAML(ghParams, atlantisParams)
 	return err
 }
 
-func parseWhenModifiedList(whenModified string) []string {
+func defineWhenModifiedList(whenModified string) []string {
 	if whenModified == "" {
 		return atlantis.DefaultWhenModified
 	}
 	return strings.Split(whenModified, ",")
+}
+
+func defineProjectPatternDetector(patternDetector, workflow string) string {
+	value, found := atlantis.WorkflowPatternDetectorMap[workflow]
+	if !found {
+		err := fmt.Errorf("Workflow %s not found", workflow)
+		return err.Error()
+	}
+	if patternDetector == "" {
+		return value
+	}
+	return patternDetector
 }
