@@ -260,7 +260,7 @@ func TestMultiWorkspaceDetectProjectWorkspaces(t *testing.T) {
 		},
 	}
 
-	changedFiles := []string{"mockproject/workspace_vars/test1.tfvars", "project2/file2.tfvars"}
+	changedFiles := []string{"mockproject/multiworkspace/workspace_vars/test1.tfvars", "project2/file2.tfvars"}
 
 	foldersList, err := detectProjectWorkspaces(foldersList, "multi-workspace", "workspace_vars", changedFiles)
 
@@ -277,23 +277,23 @@ func TestMultiWorkspaceDetectProjectWorkspaces(t *testing.T) {
 }
 
 func TestMultiWorkspaceGetProjectScope(t *testing.T) {
-	changedFiles := []string{"mockproject/worksspace_vars/file1.tfvars"}
+	changedFiles := []string{"mockproject/multiworkspace/workspace_vars/file1.tfvars"}
 
-	scope := multiWorkspaceGetProjectScope("project1", "workspace_vars", changedFiles)
+	scope := multiWorkspaceGetProjectScope("mockproject/multiworkspace", "workspace_vars", changedFiles)
 	assert.Equal(t, "workspace", scope)
 
 	scope = multiWorkspaceGetProjectScope("project2", "workspace_vars", changedFiles)
 	assert.Equal(t, "workspace", scope)
 
-	changedFiles = append(changedFiles, "project1/some_file.txt")
-	scope = multiWorkspaceGetProjectScope("project1", "workspace_vars", changedFiles)
+	changedFiles = append(changedFiles, "mockproject/multiworkspace/main.tf")
+	scope = multiWorkspaceGetProjectScope("mockproject/multiworkspace", "workspace_vars", changedFiles)
 	assert.Equal(t, "crossWorkspace", scope)
 }
 
 func TestMultiWorkspaceGenWorkspaceList(t *testing.T) {
-	changedFiles := []string{"mockproject/workspace_vars/test1.tfvars"}
+	changedFiles := []string{"mockproject/multiworkspace/workspace_vars/test1.tfvars"}
 
-	workspaceList, err := multiWorkspaceGenWorkspaceList("mockproject", changedFiles, "workspace")
+	workspaceList, err := multiWorkspaceGenWorkspaceList("mockproject/multiworkspace", changedFiles, "workspace")
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"test1"}, workspaceList)
 
@@ -314,4 +314,45 @@ func TestPrFilter(t *testing.T) {
 
 	result = prFilter(relPath, changedFiles)
 	assert.False(t, result, "Expected false, but got true")
+}
+
+func TestScanProjectFolders(t *testing.T) {
+	tests := []struct {
+		basePath              string
+		workflow              string
+		patternDetector       string
+		changedFiles          []string
+		expectedProjectFolder []ProjectFolder
+	}{
+		{
+			basePath:        "mockproject",
+			workflow:        "multi-workspace",
+			patternDetector: "workspace_vars",
+			changedFiles: []string{
+				"multiworkspace/workspace_vars/test1.tfvars",
+				"multiworkspace2/workspace_vars/test1.tfvars"},
+			expectedProjectFolder: []ProjectFolder{
+				{Path: "multiworkspace"},
+				{Path: "multiworkspace2"},
+			},
+		},
+		{
+			basePath:        "mockproject",
+			workflow:        "single-workspace",
+			patternDetector: "main.tf",
+			changedFiles:    []string{"singleworkspace/main.tf", "file2"},
+			expectedProjectFolder: []ProjectFolder{
+				{Path: "singleworkspace"},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.workflow, func(t *testing.T) {
+			projectFolders, err := scanProjectFolders(test.basePath, test.workflow, test.patternDetector, test.changedFiles)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, projectFolders) // Assuming there are valid project folders
+			assert.Equal(t, test.expectedProjectFolder, projectFolders)
+		})
+	}
 }

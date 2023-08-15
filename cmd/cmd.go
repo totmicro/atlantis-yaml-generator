@@ -70,7 +70,6 @@ Alternatively, you can set this parameter using GH_TOKEN environment variable.`)
 		os.Exit(1)
 	}
 	os.Exit(0)
-
 }
 
 func genAtlantisYaml(ccmd *cobra.Command, args []string) error {
@@ -109,7 +108,7 @@ func genAtlantisYaml(ccmd *cobra.Command, args []string) error {
 	// Define the WhenModified list
 	atlantisWhenModifiedList := defineWhenModifiedList(atlantisWhenModified)
 
-	// Define pattern detector
+	// Define pattern detector. Its value depends on workflow type
 	atlantisProjectsPatternDetector = defineProjectPatternDetector(atlantisProjectsPatternDetector, atlantisWorkflow)
 
 	// Create GitHub and Atlantis parameters
