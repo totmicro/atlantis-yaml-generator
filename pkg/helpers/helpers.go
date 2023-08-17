@@ -1,39 +1,16 @@
 package helpers
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
-	"regexp"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
-type ProjectRegexFilter struct {
-	Excludes string
-	Includes string
-}
-
-func LookupEnvString(key string, defaultValue string) string {
+func LookupEnvString(key string) string {
 	if val, ok := os.LookupEnv(key); ok {
 		return val
 	}
-	return defaultValue
-}
-
-func CheckEnvVars(key string, envVar string, defaultValue string) string {
-	if key != "" {
-		return key
-	} else {
-		return LookupEnvString(envVar, defaultValue)
-	}
-}
-
-func GetFlagOrEnv(ccmd *cobra.Command, flagName, envVar string, defaultValue string) string {
-	val, _ := ccmd.Flags().GetString(flagName)
-	return CheckEnvVars(val, envVar, defaultValue)
+	return ""
 }
 
 func WriteFile(content, filePath string) error {
@@ -43,15 +20,10 @@ func WriteFile(content, filePath string) error {
 		return err
 	}
 	defer file.Close()
-
 	// Convert the string to a byte slice
 	contentBytes := []byte(content)
-
 	// Write the content to the file
 	_, err = file.Write(contentBytes)
-	if err != nil {
-		return err
-	}
 	return err
 }
 
@@ -68,56 +40,14 @@ func IsStringInList(value string, list []string) bool {
 	return false
 }
 
-func ProjectFilter(item string, filter ProjectRegexFilter) (result bool, err error) {
-	// If the regexp is not defined, we don't filter the project
-	if filter.Includes == "" && filter.Excludes == "" {
-		return true, nil
+func ReadFile(filename string) (string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return "", err
 	}
-
-	// Compile the regular expressions
-	var patternInclude, patternExclude *regexp.Regexp
-	if filter.Includes != "" {
-		patternInclude, err = regexp.Compile(filter.Includes)
-	}
-	if filter.Excludes != "" {
-		patternExclude, err = regexp.Compile(filter.Excludes)
-	}
-
-	// Check if the item matches the include and exclude patterns
-	if patternInclude != nil && !patternInclude.MatchString(item) {
-		return false, nil
-	}
-	if patternExclude != nil && patternExclude.MatchString(item) {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func CreateProjectFilter(includes string, excludes string) ProjectRegexFilter {
-	return ProjectRegexFilter{
-		Excludes: excludes,
-		Includes: includes,
-	}
-}
-
-func CheckRequiredArgs(args interface{}) (err error) {
-	var missingParams []string
-	// Get the value of the argument
-	argsValue := reflect.ValueOf(args)
-
-	// Iterate over the fields
-	argsType := argsValue.Type()
-	for i := 0; i < argsType.NumField(); i++ {
-		field := argsType.Field(i)
-		fieldValue := argsValue.Field(i)
-		if fieldValue.Interface() == "" {
-			missingParams = append(missingParams, field.Name)
-		}
-	}
-	if len(missingParams) > 0 {
-		err = fmt.Errorf("Missing required parameters: %s", strings.Join(missingParams, ", "))
-		return err
-	}
-	return err
+	defer file.Close()
+	stat, _ := file.Stat()
+	content := make([]byte, stat.Size())
+	_, err = file.Read(content)
+	return string(content), err
 }

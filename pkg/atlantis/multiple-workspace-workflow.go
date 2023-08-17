@@ -9,8 +9,6 @@ import (
 	"github.com/totmicro/atlantis-yaml-generator/pkg/helpers"
 )
 
-const tfvarsExtension = ".tfvars"
-
 func multiWorkspaceGetProjectScope(relPath, patternDetector string, changedFiles []string) string {
 	for _, file := range changedFiles {
 		if strings.HasPrefix(file, fmt.Sprintf("%s/", relPath)) &&
@@ -37,7 +35,6 @@ func multiWorkspaceGenWorkspaceList(relPath string, changedFiles []string, scope
 }
 
 func multiWorkspaceDetectProjectWorkspaces(changedFiles []string, foldersList []ProjectFolder, patternDetector string) (updatedFolderList []ProjectFolder, err error) {
-
 	for i := range foldersList {
 		scope := multiWorkspaceGetProjectScope(foldersList[i].Path, patternDetector, changedFiles)
 		workspaceList, err := multiWorkspaceGenWorkspaceList(foldersList[i].Path, changedFiles, scope)
@@ -53,5 +50,4 @@ func multiWorkspaceWorkflowFilter(info os.FileInfo, path, patternDetector string
 	return info.IsDir() &&
 		info.Name() == patternDetector &&
 		!strings.Contains(path, ".terraform")
-
 }

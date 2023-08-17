@@ -14,13 +14,21 @@ help: Makefile
 install:
 	go mod download
 
+## Run tests.
+tests: main.go
+	go test -v ./...
+
+## Check coverage.
+coverage: main.go
+	go test  ./... -cover
+
 ## build: Builds the project.
 build: main.go
 	go build -o build/atlantis-yaml-generator
 
-## build-all: Build amd64 binaries for linux and darwin.
+## build-all: Build amd64 and arm64 binaries for linux and darwin.
 build-all: main.go
-	for arch in amd64; do \
+	for arch in amd64 arm64 ; do \
 		for os in linux darwin; do \
 			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -o "build/atlantis-yaml-generator_"$$os"_$$arch" $(LDFLAGS) ; \
 		done; \

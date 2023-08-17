@@ -4,38 +4,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/totmicro/atlantis-yaml-generator/pkg/github"
+	"github.com/totmicro/atlantis-yaml-generator/pkg/config"
 	"github.com/totmicro/atlantis-yaml-generator/pkg/helpers"
 	"gopkg.in/yaml.v3"
 )
 
-// DefaultWhenModified is the default list of file extensions to trigger a plan
-var DefaultWhenModified = []string{
-	"**/*.tf",
-	"**/*.tfvars",
-	"**/*.json",
-	"**/*.tpl",
-	"**/*.tmpl",
-	"**/*.xml",
-}
-
-// Default values for PatternDetector when not defined
-var WorkflowPatternDetectorMap = map[string]string{
-	"single-workspace": "main.tf",
-	"multi-workspace":  "workspace_vars",
-}
-
-// Default values when not defined
-const (
-	DefaultOutputFile        = "atlantis.yaml"
-	DefaultAutomerge         = "false"
-	DefaultParallelPlan      = "true"
-	DefaultParallelApply     = "true"
-	DefaultAtlantisTfRootDir = "./"
-)
+const tfvarsExtension = ".tfvars"
 
 type Config struct {
 	Version       int       `yaml:"version"`
@@ -56,58 +34,61 @@ type Project struct {
 	} `yaml:"autoplan"`
 }
 
-type Parameters struct {
-	Automerge        string
-	ParallelApply    string
-	ParallelPlan     string
-	TfRootDir        string
-	OutputFile       string
-	Workflow         string
-	WhenModified     []string
-	ExcludedProjects string
-	IncludedProjects string
-	PatternDetector  string
-}
-
 type ProjectFolder struct {
 	Path          string
 	WorkspaceList []string
 }
 
 // GenerateAtlantisYAML generates the atlantis.yaml file
-func GenerateAtlantisYAML(gh github.GithubRequest, at Parameters) error {
+func GenerateAtlantisYAML(prChangedFiles []string) error {
 	// Get the changed files from the PR
-	prChangedFiles, err := github.GetChangedFiles(gh)
-	if err != nil {
-		return err
-	}
+
 	// Scan folders to detect projects
-	projectFoldersList, err := scanProjectFolders(at.TfRootDir, at.Workflow, at.PatternDetector, prChangedFiles)
+	projectFoldersList, err := scanProjectFolders(
+		config.GlobalConfig.Parameters["terraform-base-dir"],
+		config.GlobalConfig.Parameters["workflow"],
+		config.GlobalConfig.Parameters["pattern-detector"],
+		prChangedFiles)
 	if err != nil {
 		return err
 	}
 	// Detect project workspaces
-	projectFoldersListWithWorkspaces, err := detectProjectWorkspaces(projectFoldersList, at.Workflow, at.PatternDetector, prChangedFiles)
+	projectFoldersListWithWorkspaces, err := detectProjectWorkspaces(
+		projectFoldersList,
+		config.GlobalConfig.Parameters["workflow"],
+		config.GlobalConfig.Parameters["pattern-detector"],
+		prChangedFiles)
 	if err != nil {
 		return err
 	}
 	// Generate atlantis projects
-	atlantisProjects, err := generateAtlantisProjects(at.Workflow, projectFoldersListWithWorkspaces)
+	atlantisProjects, err := generateAtlantisProjects(
+		config.GlobalConfig.Parameters["workflow"],
+		projectFoldersListWithWorkspaces)
 	if err != nil {
 		return err
 	}
 	// Filter atlantis projects with included and excluded regex rules
-	filteredAtlantisProjects, err := filterAtlantisProjects(at.ExcludedProjects, at.IncludedProjects, atlantisProjects)
+	filteredAtlantisProjects, err := filterAtlantisProjects(
+		config.GlobalConfig.Parameters["excluded-projects"],
+		config.GlobalConfig.Parameters["included-projects"],
+		atlantisProjects)
 	if err != nil {
 		return err
 	}
 	// Generate atlantis config to later render the atlantis.yaml file
-	atlantisConfig, err := generateAtlantisConfig(at, filteredAtlantisProjects)
+	atlantisConfig, err := generateAtlantisConfig(
+		config.GlobalConfig.Parameters["automerge"],
+		config.GlobalConfig.Parameters["parallel-apply"],
+		config.GlobalConfig.Parameters["parallel-plan"],
+		config.GlobalConfig.Parameters["when-modified"],
+		filteredAtlantisProjects)
 	if err != nil {
 		return err
 	}
 	// Generate atlantis.yaml file
-	err = generateOutputYAML(&atlantisConfig, at.OutputFile)
+	err = generateOutputYAML(&atlantisConfig,
+		config.GlobalConfig.Parameters["output-file"])
 	if err != nil {
 		return err
 	}
@@ -164,14 +145,10 @@ func generateAtlantisProjects(workflow string, projectFolderList []ProjectFolder
 }
 
 func filterAtlantisProjects(excludedProjects, includedProjects string, atlantisProjects []Project) (filteredAtlantisProjects []Project, err error) {
-	// Create project filter with included and excluded regex rules
-	projectFilter := helpers.ProjectRegexFilter{
-		Includes: includedProjects,
-		Excludes: excludedProjects,
-	}
+
 	// Iterate over atlantis projects and filter them
 	for _, project := range atlantisProjects {
-		projectFilterResult, err := helpers.ProjectFilter(project.Name, projectFilter)
+		projectFilterResult, err := projectFilter(project.Name, excludedProjects, includedProjects)
 		if err != nil {
 			return filteredAtlantisProjects, err
 		}
@@ -182,27 +159,27 @@ func filterAtlantisProjects(excludedProjects, includedProjects string, atlantisP
 	return filteredAtlantisProjects, nil
 }
 
-func generateAtlantisConfig(at Parameters, projects []Project) (Config, error) {
+func generateAtlantisConfig(autoMerge, parallelApply, parallelPlan, whenModified string, projects []Project) (Config, error) {
 	// Parse atlantis parameters to detect config values
-	automerge, err := strconv.ParseBool(at.Automerge)
+	automerge, err := strconv.ParseBool(autoMerge)
 	if err != nil {
 		return Config{}, err
 	}
-	parallelApply, _ := strconv.ParseBool(at.ParallelApply)
+	parallelapply, err := strconv.ParseBool(parallelApply)
 	if err != nil {
 		return Config{}, err
 	}
-	parallelPlan, _ := strconv.ParseBool(at.ParallelPlan)
+	parallelplan, err := strconv.ParseBool(parallelPlan)
 	if err != nil {
 		return Config{}, err
 	}
-
+	whenmodified := strings.Split(whenModified, ",")
 	// Generate the atlantis base config
 	config := Config{
 		Version:       3,
 		Automerge:     automerge,
-		ParallelApply: parallelApply,
-		ParallelPlan:  parallelPlan,
+		ParallelApply: parallelapply,
+		ParallelPlan:  parallelplan,
 	}
 	// Append generated projects to the atlantis config
 	for _, info := range projects {
@@ -216,7 +193,7 @@ func generateAtlantisConfig(at Parameters, projects []Project) (Config, error) {
 				WhenModified []string `yaml:"when_modified"`
 			}{
 				Enabled:      true,
-				WhenModified: at.WhenModified,
+				WhenModified: whenmodified,
 			},
 		}
 		config.Projects = append(config.Projects, project)
@@ -226,11 +203,8 @@ func generateAtlantisConfig(at Parameters, projects []Project) (Config, error) {
 
 func generateOutputYAML(config *Config, outputFile string) error {
 	// Generate the atlantis.yaml file
-	yamlBytes, err := yaml.Marshal(&config)
-	if err != nil {
-		return err
-	}
-	err = helpers.WriteFile(string(yamlBytes), outputFile)
+	yamlBytes, _ := yaml.Marshal(&config)
+	err := helpers.WriteFile(string(yamlBytes), outputFile)
 	return err
 }
 
@@ -263,4 +237,33 @@ func genProjectName(path, workspace string) string {
 		return fmt.Sprintf("%s-%s", strings.Replace(path, "/", "-", 1), workspace)
 	}
 	return strings.Replace(path, "/", "-", 1)
+}
+
+func projectFilter(item, excludes, includes string) (result bool, err error) {
+	// If the regexp is not defined, we don't filter the project
+	if includes == "" && excludes == "" {
+		return true, nil
+	}
+	// Compile the regular expressions
+	var patternInclude, patternExclude *regexp.Regexp
+	if includes != "" {
+		patternInclude, err = regexp.Compile(includes)
+	}
+	if err != nil {
+		return false, err
+	}
+	if excludes != "" {
+		patternExclude, err = regexp.Compile(excludes)
+	}
+	if err != nil {
+		return false, err
+	}
+	// Check if the item matches the include and exclude patterns
+	if patternInclude != nil && !patternInclude.MatchString(item) {
+		return false, nil
+	}
+	if patternExclude != nil && patternExclude.MatchString(item) {
+		return false, nil
+	}
+	return true, nil
 }
