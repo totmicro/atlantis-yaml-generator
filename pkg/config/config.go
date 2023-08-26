@@ -55,10 +55,17 @@ var ParameterList = []Parameter{
 	},
 	{
 		Name:         "output-file",
-		Description:  "Atlantis output file name.",
+		Description:  "Atlantis YAML output file name.",
 		Required:     false,
 		DefaultValue: "atlantis.yaml",
 		Shorthand:    "f",
+	},
+	{
+		Name:         "output-type",
+		Description:  "Atlantis YAML output type. [file|stdout].",
+		Required:     false,
+		DefaultValue: "file",
+		Shorthand:    "e",
 	},
 	{
 		Name:         "workflow",
@@ -69,7 +76,7 @@ var ParameterList = []Parameter{
 	},
 	{
 		Name:         "when-modified",
-		Description:  "Atlantis When modified (list of strings) to run autoplan.",
+		Description:  "Atlantis will trigger an autoplan when these modifications occur (list of strings).",
 		Required:     false,
 		DefaultValue: "**/*.tf,**/*.tfvars,**/*.json,**/*.tpl,**/*.tmpl,**/*.xml",
 		Shorthand:    "m",
@@ -118,8 +125,8 @@ var ParameterList = []Parameter{
 	},
 	{
 		Name:         "gh-token",
-		Description:  "Github Token Value.",
-		Required:     true,
+		Description:  "Specify the GitHub token when automatic detection is not possible.",
+		Required:     false,
 		DefaultValue: "",
 		Shorthand:    "t",
 	},

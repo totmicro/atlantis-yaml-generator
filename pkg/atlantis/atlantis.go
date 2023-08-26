@@ -88,7 +88,8 @@ func GenerateAtlantisYAML(prChangedFiles []string) error {
 	}
 	// Generate atlantis.yaml file
 	err = generateOutputYAML(&atlantisConfig,
-		config.GlobalConfig.Parameters["output-file"])
+		config.GlobalConfig.Parameters["output-file"],
+		config.GlobalConfig.Parameters["output-type"])
 	if err != nil {
 		return err
 	}
@@ -201,11 +202,22 @@ func generateAtlantisConfig(autoMerge, parallelApply, parallelPlan, whenModified
 	return config, err
 }
 
-func generateOutputYAML(config *Config, outputFile string) error {
+func generateOutputYAML(config *Config, outputFile string, outputType string) error {
 	// Generate the atlantis.yaml file
-	yamlBytes, _ := yaml.Marshal(&config)
-	err := helpers.WriteFile(string(yamlBytes), outputFile)
-	return err
+	yamlBytes, err := yaml.Marshal(&config)
+	if err != nil {
+		return err
+	}
+	switch outputType {
+	case "file":
+		err = helpers.WriteFile(string(yamlBytes), outputFile)
+		return err
+	case "stdout":
+		fmt.Printf(string(yamlBytes))
+		return nil
+	default:
+		return fmt.Errorf("output type '%s' is not supported", outputType)
+	}
 }
 
 func workflowFilter(info os.FileInfo, path, workflow, patternDetector string) bool {

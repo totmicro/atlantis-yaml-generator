@@ -565,9 +565,10 @@ func TestGenerateOutputYAML(t *testing.T) {
 
 	// Define a sample output file path
 	outputFile := "/tmp/test_output.yaml"
+	outputType := "file"
 
 	// Call the function and generate the YAML
-	err := generateOutputYAML(config, outputFile)
+	err := generateOutputYAML(config, outputFile, outputType)
 	if err != nil {
 		t.Errorf("Error generating output YAML: %v", err)
 	}
@@ -603,6 +604,7 @@ func TestGenerateAtlantisYAML(t *testing.T) {
 	config.GlobalConfig.Parameters["pattern-detector"] = "main.tf"
 	config.GlobalConfig.Parameters["terraform-base-dir"] = "mockproject"
 	config.GlobalConfig.Parameters["output-file"] = tempFile
+	config.GlobalConfig.Parameters["output-type"] = "file"
 	config.GlobalConfig.Parameters["parallel-apply"] = "true"
 	config.GlobalConfig.Parameters["parallel-plan"] = "true"
 	config.GlobalConfig.Parameters["automerge"] = "true"
@@ -611,4 +613,15 @@ func TestGenerateAtlantisYAML(t *testing.T) {
 	assert.NoError(t, err)
 
 	os.Remove(tempFile)
+
+	config.GlobalConfig.Parameters["output-type"] = "undefined"
+
+	err = GenerateAtlantisYAML(prChangedFiles)
+	assert.Error(t, err)
+
+	config.GlobalConfig.Parameters["output-type"] = "stdout"
+
+	err = GenerateAtlantisYAML(prChangedFiles)
+	assert.NoError(t, err)
+
 }
