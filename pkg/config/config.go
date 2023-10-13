@@ -134,7 +134,7 @@ var ParameterList = []Parameter{
 		Name:         "pr-filter",
 		Description:  "Filter projects based on the PR changes (Only for github SCM).",
 		Required:     false,
-		DefaultValue: "false",
+		DefaultValue: "true",
 		Shorthand:    "u",
 	},
 }
