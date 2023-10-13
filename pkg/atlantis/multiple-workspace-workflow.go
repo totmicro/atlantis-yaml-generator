@@ -46,7 +46,6 @@ func multiWorkspaceDetectProjectWorkspaces(changedFiles []string, enablePRFilter
 		}
 		foldersList[i].WorkspaceList = workspaceList
 	}
-	fmt.Println(foldersList)
 	return foldersList, nil
 }
 

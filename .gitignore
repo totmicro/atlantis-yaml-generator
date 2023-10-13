@@ -2,3 +2,4 @@ build
 auto.sh
 atlantis-yaml-generator
 sharecode.sh
+atlantis.yaml
