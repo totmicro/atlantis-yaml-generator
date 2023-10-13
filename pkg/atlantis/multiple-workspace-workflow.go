@@ -24,23 +24,30 @@ func multiWorkspaceGenWorkspaceList(relPath string, changedFiles []string, enabl
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.HasSuffix(info.Name(), tfvarsExtension) {
+		if !info.IsDir() && strings.HasSuffix(info.Name(),
+			tfvarsExtension) &&
+			!strings.Contains(path, ".terraform") {
+
 			if helpers.IsStringInList(path, changedFiles) ||
-				(scope == "crossWorkspace") ||
-				enablePRFilter != true {
+				(scope == "crossWorkspace" || !enablePRFilter) {
 				workspaceList = append(workspaceList, helpers.TrimFileExtension(info.Name()))
 			}
 		}
 		return nil
 	})
-
 	return workspaceList, err
 }
 
-func multiWorkspaceDetectProjectWorkspaces(changedFiles []string, enablePRFilter bool, foldersList []ProjectFolder, patternDetector string) (updatedFolderList []ProjectFolder, err error) {
+func multiWorkspaceDetectProjectWorkspaces(changedFiles []string, enablePRFilter bool,
+	foldersList []ProjectFolder, patternDetector string) (updatedFolderList []ProjectFolder, err error) {
+
 	for i := range foldersList {
 		scope := multiWorkspaceGetProjectScope(foldersList[i].Path, patternDetector, changedFiles)
-		workspaceList, err := multiWorkspaceGenWorkspaceList(foldersList[i].Path, changedFiles, enablePRFilter, scope)
+		workspaceList, err := multiWorkspaceGenWorkspaceList(
+			fmt.Sprintf("%s/%s", foldersList[i].Path, patternDetector),
+			changedFiles,
+			enablePRFilter,
+			scope)
 		if err != nil {
 			return foldersList, err
 		}
