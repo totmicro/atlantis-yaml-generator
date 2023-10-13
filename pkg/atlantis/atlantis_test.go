@@ -324,7 +324,9 @@ func TestScanProjectFolders(t *testing.T) {
 			patternDetector: "workspace_vars",
 			changedFiles: []string{
 				"multiworkspace/workspace_vars/test1.tfvars",
-				"multiworkspace2/workspace_vars/test1.tfvars"},
+				"multiworkspace2/workspace_vars/test1.tfvars",
+				"multiworkspace2/workspace_vars/test2.tfvars",
+			},
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "multiworkspace"},
 				{Path: "multiworkspace2"},
@@ -518,6 +520,26 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 				{
 					Path:          "mockproject/multiworkspace",
 					WorkspaceList: []string{"test1"},
+				},
+			},
+			expectedErr: false,
+		},
+		{
+			name:            "multi-workspace",
+			foldersList:     []ProjectFolder{{Path: "mockproject/multiworkspace"}, {Path: "mockproject/multiworkspace2"}},
+			workflow:        "multi-workspace",
+			patternDetector: "workspace_vars",
+			changedFiles: []string{"mockproject/multiworkspace/workspace_vars/test1.tfvars",
+				"mockproject/multiworkspace2/workspace_vars/test2.tfvars",
+			},
+			expectedFoldersList: []ProjectFolder{
+				{
+					Path:          "mockproject/multiworkspace",
+					WorkspaceList: []string{"test1"},
+				},
+				{
+					Path:          "mockproject/multiworkspace2",
+					WorkspaceList: []string{"test2"},
 				},
 			},
 			expectedErr: false,
