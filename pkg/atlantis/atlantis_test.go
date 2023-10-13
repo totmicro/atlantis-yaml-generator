@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestFilterAtlantisProjects(t *testing.T) {
+func TestApplyProjectFilter(t *testing.T) {
 	atlantisProjects := []Project{
 		{Name: "project1"},
 		{Name: "project2"},
@@ -72,7 +72,7 @@ func TestFilterAtlantisProjects(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			filteredProjects, err := filterAtlantisProjects(tc.excludedProjects, tc.includedProjects, atlantisProjects)
+			filteredProjects, err := applyProjectFilter(tc.excludedProjects, tc.includedProjects, atlantisProjects)
 
 			if tc.expectedError && err == nil {
 				t.Error("Expected an error, but got nil")
@@ -309,13 +309,44 @@ func TestPrFilter(t *testing.T) {
 	assert.False(t, result, "Expected false, but got true")
 }
 
+func TestApplyPRFilter(t *testing.T) {
+	// Define some sample data
+	projectFolders := []ProjectFolder{
+		{Path: "project1"},
+		{Path: "project2"},
+		{Path: "project3"},
+	}
+
+	changedFiles := []string{"project1/main.tf", "project2/main.tf"}
+
+	// Test case 1: Filtered projects
+	filteredProjectFolders, err := applyPRFilter(projectFolders, changedFiles)
+	if err != nil {
+		t.Errorf("Expected no error, but got an error: %v", err)
+	}
+
+	expectedFilteredProjects := []ProjectFolder{
+		{Path: "project1"},
+		{Path: "project2"},
+	}
+
+	if len(filteredProjectFolders) != len(expectedFilteredProjects) {
+		t.Errorf("Expected %d filtered projects, but got %d", len(expectedFilteredProjects), len(filteredProjectFolders))
+	}
+
+	for i, project := range filteredProjectFolders {
+		if project.Path != expectedFilteredProjects[i].Path {
+			t.Errorf("Expected project path %s, but got %s", expectedFilteredProjects[i].Path, project.Path)
+		}
+	}
+
+}
+
 func TestScanProjectFolders(t *testing.T) {
 	tests := []struct {
 		basePath              string
 		workflow              string
 		patternDetector       string
-		changedFiles          []string
-		enablePRFilter        bool
 		expectedProjectFolder []ProjectFolder
 		expectedError         bool
 	}{
@@ -323,25 +354,6 @@ func TestScanProjectFolders(t *testing.T) {
 			basePath:        "mockproject",
 			workflow:        "multi-workspace",
 			patternDetector: "workspace_vars",
-			changedFiles: []string{
-				"multiworkspace/workspace_vars/test1.tfvars",
-				"multiworkspace2/workspace_vars/test1.tfvars",
-				"multiworkspace2/workspace_vars/test2.tfvars",
-			},
-			enablePRFilter: true,
-			expectedProjectFolder: []ProjectFolder{
-				{Path: "multiworkspace"},
-				{Path: "multiworkspace2"},
-			},
-		},
-		{
-			basePath:        "mockproject",
-			workflow:        "multi-workspace",
-			patternDetector: "workspace_vars",
-			changedFiles: []string{
-				"multiworkspace/workspace_vars/test1.tfvars",
-			},
-			enablePRFilter: false,
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "multiworkspace"},
 				{Path: "multiworkspace2"},
@@ -351,18 +363,6 @@ func TestScanProjectFolders(t *testing.T) {
 			basePath:        "mockproject",
 			workflow:        "single-workspace",
 			patternDetector: "main.tf",
-			changedFiles:    []string{"singleworkspace/main.tf", "file2"},
-			enablePRFilter:  true,
-			expectedProjectFolder: []ProjectFolder{
-				{Path: "singleworkspace"},
-			},
-		},
-		{
-			basePath:        "mockproject",
-			workflow:        "single-workspace",
-			patternDetector: "main.tf",
-			changedFiles:    []string{"singleworkspace/main.tf", "file2"},
-			enablePRFilter:  false,
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "singleworkspace"},
 				{Path: "singleworkspace2"},
@@ -372,8 +372,6 @@ func TestScanProjectFolders(t *testing.T) {
 			basePath:        "invalidpath", // Invalid path to check file walk error
 			workflow:        "single-workspace",
 			patternDetector: "main.tf",
-			changedFiles:    []string{"singleworkspace/main.tf", "file2"},
-			enablePRFilter:  true,
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "singleworkspace"},
 			},
@@ -383,7 +381,7 @@ func TestScanProjectFolders(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.workflow, func(t *testing.T) {
-			projectFolders, err := scanProjectFolders(test.basePath, test.workflow, test.patternDetector, test.changedFiles, test.enablePRFilter)
+			projectFolders, err := scanProjectFolders(test.basePath, test.workflow, test.patternDetector)
 			if test.expectedError {
 				assert.Error(t, err)
 			} else {

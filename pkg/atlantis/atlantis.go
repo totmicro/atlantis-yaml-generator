@@ -43,35 +43,45 @@ type ProjectFolder struct {
 
 // GenerateAtlantisYAML generates the atlantis.yaml file
 func GenerateAtlantisYAML() error {
+
+	// Check if the PR filter is enabled
+	enablePRFilter := config.GlobalConfig.Parameters["pr-filter"] == "true"
+
 	// Get the changed files from the PR if prFilter is enabled
-	prChangedFiles := []string{}
-	var err error
-	if config.GlobalConfig.Parameters["pr-filter"] == "true" {
+	var prChangedFiles []string
+	if enablePRFilter {
+		var err error
 		prChangedFiles, err = github.GetChangedFiles()
 		if err != nil {
 			return err
 		}
 	}
+
 	// Scan folders to detect projects
 	projectFoldersList, err := scanProjectFolders(
 		config.GlobalConfig.Parameters["terraform-base-dir"],
 		config.GlobalConfig.Parameters["workflow"],
 		config.GlobalConfig.Parameters["pattern-detector"],
-		prChangedFiles,
-		config.GlobalConfig.Parameters["pr-filter"] == "true")
+	)
 	if err != nil {
 		return err
 	}
+
+	// Apply PR filter if enabled
+	if enablePRFilter {
+		projectFoldersList, err = applyPRFilter(projectFoldersList, prChangedFiles)
+	}
+
 	// Detect project workspaces
 	projectFoldersListWithWorkspaces, err := detectProjectWorkspaces(
 		projectFoldersList,
 		config.GlobalConfig.Parameters["workflow"],
 		config.GlobalConfig.Parameters["pattern-detector"],
-		prChangedFiles,
-		config.GlobalConfig.Parameters["pr-filter"] == "true")
+		prChangedFiles, enablePRFilter)
 	if err != nil {
 		return err
 	}
+
 	// Generate atlantis projects
 	atlantisProjects, err := generateAtlantisProjects(
 		config.GlobalConfig.Parameters["workflow"],
@@ -79,14 +89,16 @@ func GenerateAtlantisYAML() error {
 	if err != nil {
 		return err
 	}
+
 	// Filter atlantis projects with included and excluded regex rules
-	filteredAtlantisProjects, err := filterAtlantisProjects(
+	filteredAtlantisProjects, err := applyProjectFilter(
 		config.GlobalConfig.Parameters["excluded-projects"],
 		config.GlobalConfig.Parameters["included-projects"],
 		atlantisProjects)
 	if err != nil {
 		return err
 	}
+
 	// Generate atlantis config to later render the atlantis.yaml file
 	atlantisConfig, err := generateAtlantisConfig(
 		config.GlobalConfig.Parameters["automerge"],
@@ -97,6 +109,7 @@ func GenerateAtlantisYAML() error {
 	if err != nil {
 		return err
 	}
+
 	// Generate atlantis.yaml file
 	err = generateOutputYAML(&atlantisConfig,
 		config.GlobalConfig.Parameters["output-file"],
@@ -107,14 +120,13 @@ func GenerateAtlantisYAML() error {
 	return nil
 }
 
-func scanProjectFolders(basePath, workflow, patternDetector string, changedFiles []string, enablePRFilter bool) (projectFolders []ProjectFolder, err error) {
+func scanProjectFolders(basePath, workflow, patternDetector string) (projectFolders []ProjectFolder, err error) {
 	err = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil {
 			return err
 		}
-
-		relPath, _ := filepath.Rel(basePath, filepath.Dir(path))
-		if shouldIncludeProject(info, path, workflow, patternDetector, relPath, changedFiles, enablePRFilter) {
+		if workflowFilter(info, path, workflow, patternDetector) {
+			relPath, _ := filepath.Rel(basePath, filepath.Dir(path))
 			projectFolders = append(projectFolders, ProjectFolder{Path: relPath})
 		}
 		return nil
@@ -123,16 +135,17 @@ func scanProjectFolders(basePath, workflow, patternDetector string, changedFiles
 	return projectFolders, err
 }
 
-func shouldIncludeProject(info os.FileInfo, path, workflow, patternDetector string, relPath string, changedFiles []string, enablePRFilter bool) bool {
-	workflowFilterResult := workflowFilter(info, path, workflow, patternDetector)
+func applyPRFilter(projectFolders []ProjectFolder, changedFiles []string) (filteredProjectFolders []ProjectFolder, err error) {
+	// Iterate over atlantis projects and filter them
+	for _, project := range projectFolders {
+		prFilterResult := prFilter(project.Path, changedFiles)
 
-	// If PR filter is enabled, check if the project should be included based on changed files.
-	if enablePRFilter {
-		prFilterResult := prFilter(relPath, changedFiles)
-		return workflowFilterResult && prFilterResult
+		if prFilterResult {
+			filteredProjectFolders = append(filteredProjectFolders, project)
+		}
 	}
 
-	return workflowFilterResult
+	return filteredProjectFolders, nil
 }
 
 func detectProjectWorkspaces(foldersList []ProjectFolder, workflow string, patternDetector string, changedFiles []string, enablePRfilter bool) (updatedFoldersList []ProjectFolder, err error) {
@@ -163,7 +176,7 @@ func generateAtlantisProjects(workflow string, projectFolderList []ProjectFolder
 	return projects, nil
 }
 
-func filterAtlantisProjects(excludedProjects, includedProjects string, atlantisProjects []Project) (filteredAtlantisProjects []Project, err error) {
+func applyProjectFilter(excludedProjects, includedProjects string, atlantisProjects []Project) (filteredAtlantisProjects []Project, err error) {
 
 	// Iterate over atlantis projects and filter them
 	for _, project := range atlantisProjects {
