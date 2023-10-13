@@ -85,7 +85,7 @@ Run the tool using the following command:
 
 *When you run this command within an Atlantis workflow, it will make an effort to automatically identify the GitHub token by extracting it from the URL in the .git/config file.*
 
-*When you run this command within an Atlantis workflow, `base-repo` `base-repo-owner` and `pull-num parameters will be automatically identified.*
+*When you run this command within an Atlantis workflow, `base-repo` `base-repo-owner` and `pull-num` parameters will be automatically identified.*
 
 -------
 
@@ -125,6 +125,53 @@ pre_workflow_hooks:
   - run: >
       atlantis-yaml-generator  -w single-workspace --pattern-detector main.tf
 ```
+
+Sample output:
+
+<details><summary>Files changed in the PR</summary>
+
+```
+project/one/main.tf
+project/two/main.tf
+```
+</details>
+
+<details><summary>Rendered atlantis.yaml file</summary>
+
+```
+version: 3
+automerge: true
+parallel_apply: true
+parallel_plan: true
+projects:
+    - name: project-one
+      workspace: default
+      workflow: single-workspace
+      dir: project/one
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+    - name: project-two
+      workspace: default
+      workflow: single-workspace
+      dir: project/two
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+```
+</details>
 
 Additionally, it's essential to ensure that the atlantis-yaml-generator binary is included on your Atlantis server.
 
