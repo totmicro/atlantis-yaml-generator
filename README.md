@@ -85,6 +85,8 @@ Run the tool using the following command:
 
 *When you run this command within an Atlantis workflow, it will make an effort to automatically identify the GitHub token by extracting it from the URL in the .git/config file.*
 
+*When you run this command within an Atlantis workflow, `base-repo` `base-repo-owner` and `pull-num parameters will be automatically identified.*
+
 -------
 
 **Workflows**
@@ -110,6 +112,21 @@ func detectProjectWorkspaces(foldersList []ProjectFolder, workflow string, patte
 ```
 
 *Note that `atlantis-yaml-detector` will scan all files and folders under the current path. Alternatively you can pass the base path of terraform folders using --terraform-base-dir arg.*
+
+-------
+
+**Atlantis integration**
+-------------
+
+Incorporating this generator into Atlantis requires setting up a [`pre-workflow-run`](https://www.runatlantis.io/docs/pre-workflow-hooks.html) as follows:
+
+```yaml
+pre_workflow_hooks:
+  - run: >
+      atlantis-yaml-generator  -w single-workspace --pattern-detector main.tf
+```
+
+Additionally, it's essential to ensure that the atlantis-yaml-generator binary is included on your Atlantis server.
 
 -------
 
