@@ -315,6 +315,7 @@ func TestScanProjectFolders(t *testing.T) {
 		workflow              string
 		patternDetector       string
 		changedFiles          []string
+		enablePRFilter        bool
 		expectedProjectFolder []ProjectFolder
 		expectedError         bool
 	}{
@@ -327,6 +328,20 @@ func TestScanProjectFolders(t *testing.T) {
 				"multiworkspace2/workspace_vars/test1.tfvars",
 				"multiworkspace2/workspace_vars/test2.tfvars",
 			},
+			enablePRFilter: true,
+			expectedProjectFolder: []ProjectFolder{
+				{Path: "multiworkspace"},
+				{Path: "multiworkspace2"},
+			},
+		},
+		{
+			basePath:        "mockproject",
+			workflow:        "multi-workspace",
+			patternDetector: "workspace_vars",
+			changedFiles: []string{
+				"multiworkspace/workspace_vars/test1.tfvars",
+			},
+			enablePRFilter: false,
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "multiworkspace"},
 				{Path: "multiworkspace2"},
@@ -337,8 +352,20 @@ func TestScanProjectFolders(t *testing.T) {
 			workflow:        "single-workspace",
 			patternDetector: "main.tf",
 			changedFiles:    []string{"singleworkspace/main.tf", "file2"},
+			enablePRFilter:  true,
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "singleworkspace"},
+			},
+		},
+		{
+			basePath:        "mockproject",
+			workflow:        "single-workspace",
+			patternDetector: "main.tf",
+			changedFiles:    []string{"singleworkspace/main.tf", "file2"},
+			enablePRFilter:  false,
+			expectedProjectFolder: []ProjectFolder{
+				{Path: "singleworkspace"},
+				{Path: "singleworkspace2"},
 			},
 		},
 		{
@@ -346,6 +373,7 @@ func TestScanProjectFolders(t *testing.T) {
 			workflow:        "single-workspace",
 			patternDetector: "main.tf",
 			changedFiles:    []string{"singleworkspace/main.tf", "file2"},
+			enablePRFilter:  true,
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "singleworkspace"},
 			},
@@ -355,7 +383,7 @@ func TestScanProjectFolders(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.workflow, func(t *testing.T) {
-			projectFolders, err := scanProjectFolders(test.basePath, test.workflow, test.patternDetector, test.changedFiles)
+			projectFolders, err := scanProjectFolders(test.basePath, test.workflow, test.patternDetector, test.changedFiles, test.enablePRFilter)
 			if test.expectedError {
 				assert.Error(t, err)
 			} else {
@@ -485,6 +513,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 		workflow            string
 		patternDetector     string
 		changedFiles        []string
+		enablePRFilter      bool
 		expectedFoldersList []ProjectFolder
 		expectedErr         bool
 	}{
@@ -494,8 +523,22 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 			workflow:        "single-workspace",
 			patternDetector: "main.tf",
 			changedFiles:    []string{"mockproject/singleworkspace/main.tf"},
+			enablePRFilter:  true,
 			expectedFoldersList: []ProjectFolder{
 				{Path: "mockproject/singleworkspace", WorkspaceList: []string{"default"}},
+			},
+			expectedErr: false,
+		},
+		{
+			name:            "single-workspace",
+			foldersList:     []ProjectFolder{{Path: "mockproject/singleworkspace"}, {Path: "mockproject/singleworkspace2"}},
+			workflow:        "single-workspace",
+			patternDetector: "main.tf",
+			changedFiles:    []string{"mockproject/singleworkspace/main.tf"},
+			enablePRFilter:  false,
+			expectedFoldersList: []ProjectFolder{
+				{Path: "mockproject/singleworkspace", WorkspaceList: []string{"default"}},
+				{Path: "mockproject/singleworkspace2", WorkspaceList: []string{"default"}},
 			},
 			expectedErr: false,
 		},
@@ -505,6 +548,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 			workflow:        "multi-workspace",
 			patternDetector: "workspace_vard",
 			changedFiles:    []string{"invalid/workspace_vars/test1.tfvars"},
+			enablePRFilter:  true,
 			expectedFoldersList: []ProjectFolder{
 				{Path: "invalidpath", WorkspaceList: []string{"default"}},
 			},
@@ -516,6 +560,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 			workflow:        "multi-workspace",
 			patternDetector: "workspace_vars",
 			changedFiles:    []string{"mockproject/multiworkspace/workspace_vars/test1.tfvars"},
+			enablePRFilter:  true,
 			expectedFoldersList: []ProjectFolder{
 				{
 					Path:          "mockproject/multiworkspace",
@@ -532,6 +577,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 			changedFiles: []string{"mockproject/multiworkspace/workspace_vars/test1.tfvars",
 				"mockproject/multiworkspace2/workspace_vars/test2.tfvars",
 			},
+			enablePRFilter: true,
 			expectedFoldersList: []ProjectFolder{
 				{
 					Path:          "mockproject/multiworkspace",
@@ -544,12 +590,33 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 			},
 			expectedErr: false,
 		},
+		{
+			name:            "multi-workspace",
+			foldersList:     []ProjectFolder{{Path: "mockproject/multiworkspace"}, {Path: "mockproject/multiworkspace2"}},
+			workflow:        "multi-workspace",
+			patternDetector: "workspace_vars",
+			changedFiles: []string{"mockproject/multiworkspace/workspace_vars/test1.tfvars",
+				"mockproject/multiworkspace2/workspace_vars/test2.tfvars",
+			},
+			enablePRFilter: false,
+			expectedFoldersList: []ProjectFolder{
+				{
+					Path:          "mockproject/multiworkspace",
+					WorkspaceList: []string{"test1"},
+				},
+				{
+					Path:          "mockproject/multiworkspace2",
+					WorkspaceList: []string{"test1", "test2"},
+				},
+			},
+			expectedErr: false,
+		},
 		// Add more test cases as needed
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			updatedFoldersList, err := detectProjectWorkspaces(test.foldersList, test.workflow, test.patternDetector, test.changedFiles)
+			updatedFoldersList, err := detectProjectWorkspaces(test.foldersList, test.workflow, test.patternDetector, test.changedFiles, test.enablePRFilter)
 			if test.expectedErr {
 				assert.Error(t, err)
 			} else {
@@ -615,7 +682,7 @@ func TestGenerateAtlantisYAML(t *testing.T) {
 	tempDir := t.TempDir()
 	tempFile := filepath.Join(tempDir, "/atlantis.yaml")
 
-	prChangedFiles := []string{"mockproject/single-workspace/main.tf"}
+	//prChangedFiles := []string{"mockproject/single-workspace/main.tf"}
 	// Define a sample configuration
 	config.GlobalConfig.Parameters = make(map[string]string)
 	config.GlobalConfig.Parameters["gh-token"] = "test-token"
@@ -630,20 +697,21 @@ func TestGenerateAtlantisYAML(t *testing.T) {
 	config.GlobalConfig.Parameters["parallel-apply"] = "true"
 	config.GlobalConfig.Parameters["parallel-plan"] = "true"
 	config.GlobalConfig.Parameters["automerge"] = "true"
+	config.GlobalConfig.Parameters["pr-filter"] = "false"
 
-	err := GenerateAtlantisYAML(prChangedFiles)
+	err := GenerateAtlantisYAML()
 	assert.NoError(t, err)
 
 	os.Remove(tempFile)
 
 	config.GlobalConfig.Parameters["output-type"] = "undefined"
 
-	err = GenerateAtlantisYAML(prChangedFiles)
+	err = GenerateAtlantisYAML()
 	assert.Error(t, err)
 
 	config.GlobalConfig.Parameters["output-type"] = "stdout"
 
-	err = GenerateAtlantisYAML(prChangedFiles)
+	err = GenerateAtlantisYAML()
 	assert.NoError(t, err)
 
 }

@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/totmicro/atlantis-yaml-generator/pkg/config"
+	"github.com/totmicro/atlantis-yaml-generator/pkg/github"
 	"github.com/totmicro/atlantis-yaml-generator/pkg/helpers"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,15 +42,23 @@ type ProjectFolder struct {
 }
 
 // GenerateAtlantisYAML generates the atlantis.yaml file
-func GenerateAtlantisYAML(prChangedFiles []string) error {
-	// Get the changed files from the PR
-
+func GenerateAtlantisYAML() error {
+	// Get the changed files from the PR if prFilter is enabled
+	prChangedFiles := []string{}
+	var err error
+	if config.GlobalConfig.Parameters["pr-filter"] == "true" {
+		prChangedFiles, err = github.GetChangedFiles()
+		if err != nil {
+			return err
+		}
+	}
 	// Scan folders to detect projects
 	projectFoldersList, err := scanProjectFolders(
 		config.GlobalConfig.Parameters["terraform-base-dir"],
 		config.GlobalConfig.Parameters["workflow"],
 		config.GlobalConfig.Parameters["pattern-detector"],
-		prChangedFiles)
+		prChangedFiles,
+		config.GlobalConfig.Parameters["pr-filter"] == "true")
 	if err != nil {
 		return err
 	}
@@ -57,7 +67,8 @@ func GenerateAtlantisYAML(prChangedFiles []string) error {
 		projectFoldersList,
 		config.GlobalConfig.Parameters["workflow"],
 		config.GlobalConfig.Parameters["pattern-detector"],
-		prChangedFiles)
+		prChangedFiles,
+		config.GlobalConfig.Parameters["pr-filter"] == "true")
 	if err != nil {
 		return err
 	}
@@ -96,34 +107,41 @@ func GenerateAtlantisYAML(prChangedFiles []string) error {
 	return nil
 }
 
-func scanProjectFolders(basePath, workflow, patternDetector string, changedFiles []string) (projectFolders []ProjectFolder, err error) {
-	// Scan folders for projects and apply filters
+func scanProjectFolders(basePath, workflow, patternDetector string, changedFiles []string, enablePRFilter bool) (projectFolders []ProjectFolder, err error) {
 	err = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil {
 			return err
 		}
+
 		relPath, _ := filepath.Rel(basePath, filepath.Dir(path))
-		// Detect projects folders based on the workflow
-		workflowFilterResult := workflowFilter(info, path, workflow, patternDetector)
-		// Filter projects based on the PR changed files
-		prFilterResult := prFilter(relPath, changedFiles)
-		if workflowFilterResult && prFilterResult {
-			projectFolders = append(projectFolders, ProjectFolder{
-				Path: relPath,
-			})
+		if shouldIncludeProject(info, path, workflow, patternDetector, relPath, changedFiles, enablePRFilter) {
+			projectFolders = append(projectFolders, ProjectFolder{Path: relPath})
 		}
 		return nil
 	})
+
 	return projectFolders, err
 }
 
-func detectProjectWorkspaces(foldersList []ProjectFolder, workflow string, patternDetector string, changedFiles []string) (updatedFoldersList []ProjectFolder, err error) {
+func shouldIncludeProject(info os.FileInfo, path, workflow, patternDetector string, relPath string, changedFiles []string, enablePRFilter bool) bool {
+	workflowFilterResult := workflowFilter(info, path, workflow, patternDetector)
+
+	// If PR filter is enabled, check if the project should be included based on changed files.
+	if enablePRFilter {
+		prFilterResult := prFilter(relPath, changedFiles)
+		return workflowFilterResult && prFilterResult
+	}
+
+	return workflowFilterResult
+}
+
+func detectProjectWorkspaces(foldersList []ProjectFolder, workflow string, patternDetector string, changedFiles []string, enablePRfilter bool) (updatedFoldersList []ProjectFolder, err error) {
 	// Detect project workspaces based on the workflow
 	switch workflow {
 	case "single-workspace":
 		updatedFoldersList, err = singleWorkspaceDetectProjectWorkspaces(foldersList)
 	case "multi-workspace":
-		updatedFoldersList, err = multiWorkspaceDetectProjectWorkspaces(changedFiles, foldersList, patternDetector)
+		updatedFoldersList, err = multiWorkspaceDetectProjectWorkspaces(changedFiles, enablePRfilter, foldersList, patternDetector)
 	}
 	// You can add more workflows rules here if required
 	return updatedFoldersList, err

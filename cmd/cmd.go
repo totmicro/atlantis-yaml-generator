@@ -6,7 +6,6 @@ import (
 
 	"github.com/totmicro/atlantis-yaml-generator/pkg/atlantis"
 	"github.com/totmicro/atlantis-yaml-generator/pkg/config"
-	"github.com/totmicro/atlantis-yaml-generator/pkg/github"
 
 	"github.com/totmicro/atlantis-yaml-generator/pkg/version"
 
@@ -57,11 +56,7 @@ func runE(ccmd *cobra.Command, args []string) (err error) {
 	if err != nil {
 		return err
 	}
-	// Get the changed files from the PR
-	changedFiles, err := github.GetChangedFiles()
-	if err != nil {
-		return err
-	}
-	err = atlantis.GenerateAtlantisYAML(changedFiles)
+
+	err = atlantis.GenerateAtlantisYAML()
 	return err
 }

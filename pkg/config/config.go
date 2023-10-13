@@ -130,6 +130,13 @@ var ParameterList = []Parameter{
 		DefaultValue: "",
 		Shorthand:    "t",
 	},
+	{
+		Name:         "pr-filter",
+		Description:  "Filter projects based on the PR changes (Only for github SCM).",
+		Required:     false,
+		DefaultValue: "false",
+		Shorthand:    "u",
+	},
 }
 
 // Init generates the config Parameters object and checks for missing required parameters

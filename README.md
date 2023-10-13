@@ -51,6 +51,8 @@ Run the tool using the following command:
 
 -  `-q, --pattern-detector string`: discover projects based on files or directories names. (Equivalent envVar: `PATTERN_DETECTOR`)
 
+-  `-y, --pr-filter string`: filter projects based on the PR changes (Only for github SCM).. (Equivalent envVar: `PR_FILTER`)
+
 -  `-p, --pull-num string`: Github Pull Request Number to check diffs. (Equivalent envVar: `PULL_NUM`)
 
 -  `--terraform-base-dir string`: Basedir for terraform resources. (Equivalent envVar: `TERRAFORM_BASE_DIR`)
