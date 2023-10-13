@@ -226,7 +226,7 @@ Additionally, it's essential to ensure that the atlantis-yaml-generator binary i
 ------------
 **Limitations**
 ---------
-- This project is specifically designed for use with the GitHub SCM.
+- `pr-filter` parameter is specifically designed for use with the GitHub SCM.
 ------------
 **Contributing**
 
