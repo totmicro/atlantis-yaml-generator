@@ -10,11 +10,12 @@ It automates the process of detecting projects within your Terraform codebase, c
 **Features**
 ------------
 
-Generate `atlantis.yaml` files with ease.
-Automatically detect projects and workspaces based on your specified workflow.
-Customize configurations such as automerge, parallel plan/apply, and more.
-Flexible project inclusion and exclusion using regular expressions.
-
+- Generate `atlantis.yaml` files with ease.
+- Automatically detect projects and workspaces based on your specified workflow.
+- Customize configurations such as automerge, parallel plan/apply, and more.
+- Flexible project inclusion and exclusion using regular expressions.
+- Create an Atlantis project by taking into account the files modified in the PR. This approach
+ ensures that only projects relevant to the current pull request are generated, avoiding the creation of any unrelated projects.
 -----
 
 **Usage**
@@ -69,18 +70,20 @@ Run the tool using the following command:
 
 *Generate an `atlantis.yaml` file for a multi workspace workflow:*
   ```
-  atlantis-yaml-generator  --base-repo-owner spendesk --base-repo-name terraform --pull-num 884 -w multi-workspace --pattern-detector workspace_vars --gh-token ghp_xxx
+  atlantis-yaml-generator  --base-repo-owner totmicro --base-repo-name terraform --pull-num 884 -w multi-workspace --pattern-detector workspace_vars --gh-token ghp_xxx
   ```
 *Generate an `atlantis.yaml` file for a single workspace workflow:*
   ```
-  atlantis-yaml-generator  --base-repo-owner spendesk --base-repo-name datadog-as-code --pull-num 123 -w single-workspace --pattern-detector main.tf --gh-token ghp_xxx
+  atlantis-yaml-generator  --base-repo-owner totmicro --base-repo-name datadog-as-code --pull-num 123 -w single-workspace --pattern-detector main.tf --gh-token ghp_xxx
   ```
 *Generate an `atlantis.yaml` file for a multiple workspace workflow with filtering:*
   ```
-  atlantis-yaml-generator/atlantis-yaml-generator  --base-repo-owner spendesk --base-repo-name terraform --pull-num 884 -w multi-workspace --pattern-detector workspace_vars --gh-token ghp_xxxx --terraform-base-dir $(pwd) --excluded-projects "(databases-onboarding-tasks-service-production)$"
+  atlantis-yaml-generator/atlantis-yaml-generator  --base-repo-owner totmicro --base-repo-name terraform --pull-num 884 -w multi-workspace --pattern-detector workspace_vars --gh-token ghp_xxxx --terraform-base-dir $(pwd) --excluded-projects "(databases-onboarding-tasks-service-production)$"
   ```
 
-*Note that you can also use environment variables to pass the sensitive args*
+*Use environment variables to pass the sensitive args*
+
+*When you run this command within an Atlantis workflow, it will make an effort to automatically identify the GitHub token by extracting it from the URL in the .git/config file.*
 
 -------
 
@@ -154,6 +157,10 @@ func detectProjectWorkspaces(foldersList []ProjectFolder, workflow string, patte
 *   `coverage`: Run tests and get coverage.
 *   `build`: Build the project.
 *   `build-all`: Build amd64 and arm64 binaries for Linux and Darwin.
+------------
+**Limitations**
+---------
+- This project is specifically designed for use with the GitHub SCM.
 ------------
 **Contributing**
 
