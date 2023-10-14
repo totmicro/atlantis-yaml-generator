@@ -26,7 +26,7 @@ Run the tool using the following command:
 
 
 **Available Flags:**
-
+--------------------
 
 
 -  `--automerge string`: Atlantis automerge config value. (Equivalent envVar: `AUTOMERGE`)
@@ -69,25 +69,198 @@ Run the tool using the following command:
 --------
 
 **Examples**
+------------
 
-*Generate an `atlantis.yaml` file for a multi workspace workflow:*
-  ```
-  atlantis-yaml-generator  --base-repo-owner totmicro --base-repo-name terraform --pull-num 884 -w multi-workspace --pattern-detector workspace_vars --gh-token ghp_xxx
-  ```
-*Generate an `atlantis.yaml` file for a single workspace workflow:*
-  ```
-  atlantis-yaml-generator  --base-repo-owner totmicro --base-repo-name datadog-as-code --pull-num 123 -w single-workspace --pattern-detector main.tf --gh-token ghp_xxx
-  ```
-*Generate an `atlantis.yaml` file for a multiple workspace workflow with filtering:*
-  ```
-  atlantis-yaml-generator/atlantis-yaml-generator  --base-repo-owner totmicro --base-repo-name terraform --pull-num 884 -w multi-workspace --pattern-detector workspace_vars --gh-token ghp_xxxx --terraform-base-dir $(pwd) --excluded-projects "(databases-onboarding-tasks-service-production)$"
-  ```
+<details><summary>Generate an atlantis.yaml file for a multi workspace workflow</summary>
 
+```
+# atlantis-yaml-generator -w multi-workspace --pattern-detector workspace_vars -e stdout
+
+version: 3
+automerge: true
+parallel_apply: true
+parallel_plan: true
+projects:
+    - name: project_one-dev
+      workspace: dev
+      workflow: multi-workspace
+      dir: project_one
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+    - name: project_one-production
+      workspace: production
+      workflow: multi-workspace
+      dir: project_one
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+    - name: project_one-staging
+      workspace: staging
+      workflow: multi-workspace
+      dir: project_one
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+    - name: project_two-production
+      workspace: production
+      workflow: multi-workspace
+      dir: project_two
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+    - name: project_two-staging
+      workspace: staging
+      workflow: multi-workspace
+      dir: project_two
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+```
+</details>
+
+<details><summary>Generate an atlantis.yaml file for a single workspace workflow</summary>
+
+```
+# atlantis-yaml-generator -w single-workspace -e stdout --pattern-detector main.tf
+
+version: 3
+automerge: true
+parallel_apply: true
+parallel_plan: true
+projects:
+    - name: project_one
+      workspace: default
+      workflow: single-workspace
+      dir: project_one
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmp
+```
+</details>
+
+<details><summary>Generate an atlantis.yaml file for a multiple workspace workflow with regex project filtering</summary>
+
+```
+# atlantis-yaml-generator -w multi-workspace -e stdout --pattern-detector workspace_vars --included-projects "(^project_two-staging|production)$"
+
+version: 3
+automerge: true
+parallel_apply: true
+parallel_plan: true
+projects:
+    - name: project_one-production
+      workspace: production
+      workflow: multi-workspace
+      dir: project_one
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+    - name: project_two-production
+      workspace: production
+      workflow: multi-workspace
+      dir: project_two
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+    - name: project_two-staging
+      workspace: staging
+      workflow: multi-workspace
+      dir: project_two
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+```
+</details>
+
+<details><summary>Generate an atlantis.yaml file for a multi workspace workflow with PR filter</summary>
+
+```
+# atlantis-yaml-generator -w multi-workspace --pattern-detector workspace_vars -e stdout --pr-filter true --pull-num 1 --base-repo-name atlantis-yaml-generator --base-repo-owner totmicro --gh-token ghp_xxxx
+
+version: 3
+automerge: true
+parallel_apply: true
+parallel_plan: true
+projects:
+    - name: examples-multi-workspace/multiple-projects/project_one-dev
+      workspace: dev
+      workflow: multi-workspace
+      dir: examples/multi-workspace/multiple-projects/project_one
+      autoplan:
+        enabled: true
+        when_modified:
+            - '**/*.tf'
+            - '**/*.tfvars'
+            - '**/*.json'
+            - '**/*.tpl'
+            - '**/*.tmpl'
+            - '**/*.xml'
+
+```
+[PR used in the above example](https://github.com/totmicro/atlantis-yaml-generator/pull/1/files)
+
+</details>
+
+-------
 *Use environment variables to pass the sensitive args*
 
 *When you run this command within an Atlantis workflow, it will make an effort to automatically identify the GitHub token by extracting it from the URL in the .git/config file.*
 
-*When you run this command within an Atlantis workflow, `base-repo` `base-repo-owner` and `pull-num` parameters will be automatically identified.*
+*When you run this command within an Atlantis workflow, `base-repo` `base-repo-owner` and `pull-num` parameters will be automatically identified. (Only github SCM)*
 
 -------
 
