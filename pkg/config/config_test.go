@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -59,5 +60,91 @@ func TestGenerateDescription(t *testing.T) {
 	for _, tc := range testCases {
 		result := GenerateDescription(tc.param, tc.description)
 		assert.Equal(t, tc.expected, result, "Generated description doesn't match expected")
+	}
+}
+
+func TestCheckRequiredParameters(t *testing.T) {
+	// Create a sample GlobalConfig for testing
+	GlobalConfig.Parameters = map[string]string{
+		"automerge":       "true",
+		"parallel-apply":  "false",
+		"pull-num":        "",
+		"base-repo-name":  "myrepo",
+		"base-repo-owner": "myowner",
+		"pr-filter":       "true",
+	}
+
+	tests := []struct {
+		name       string
+		parameters []Parameter
+		expected   error
+	}{
+		{
+			name: "All required parameters set",
+			parameters: []Parameter{
+				{
+					Name:     "automerge",
+					Required: true,
+				},
+				{
+					Name:     "parallel-apply",
+					Required: true,
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "Required parameters missing",
+			parameters: []Parameter{
+				{
+					Name:     "automerge",
+					Required: true,
+				},
+				{
+					Name:     "pull-num",
+					Required: true,
+				},
+			},
+			expected: fmt.Errorf("Missing required parameters: pull-num"),
+		},
+		{
+			name: "Dependent parameters not triggered",
+			parameters: []Parameter{
+				{
+					Name:         "pr-filter",
+					Required:     false,
+					Dependencies: DependentParameters{WhenParentParameterIs: "true", ParameterList: []string{"base-repo-name", "base-repo-owner"}},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "Dependent parameters triggered",
+			parameters: []Parameter{
+				{
+					Name:         "pr-filter",
+					Required:     false,
+					Dependencies: DependentParameters{WhenParentParameterIs: "true", ParameterList: []string{"mydep"}},
+				},
+				{
+					Name:     "base-repo-name",
+					Required: false,
+				},
+			},
+			expected: fmt.Errorf("Missing required parameters: mydep"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := CheckRequiredParameters(test.parameters)
+			if err != nil {
+				if err.Error() != test.expected.Error() {
+					t.Errorf("Expected error: %s, but got: %s", test.expected, err)
+				}
+			} else if test.expected != nil {
+				t.Errorf("Expected error: %s, but got nil", test.expected)
+			}
+		})
 	}
 }

@@ -18,9 +18,15 @@ type Parameter struct {
 	Name         string
 	Description  string
 	Required     bool
+	Dependencies DependentParameters
 	DefaultValue string
 	Shorthand    string
 	Value        string
+}
+
+type DependentParameters struct {
+	WhenParentParameterIs string
+	ParameterList         []string
 }
 
 // ParameterList is the source of truth list for all parameters
@@ -105,21 +111,21 @@ var ParameterList = []Parameter{
 	{
 		Name:         "pull-num",
 		Description:  "Github Pull Request Number to check diffs.",
-		Required:     true,
+		Required:     false,
 		DefaultValue: "",
 		Shorthand:    "p",
 	},
 	{
 		Name:         "base-repo-name",
 		Description:  "Github Repo Name.",
-		Required:     true,
+		Required:     false,
 		DefaultValue: "",
 		Shorthand:    "r",
 	},
 	{
 		Name:         "base-repo-owner",
 		Description:  "Github Repo Owner Name.",
-		Required:     true,
+		Required:     false,
 		DefaultValue: "",
 		Shorthand:    "o",
 	},
@@ -131,10 +137,13 @@ var ParameterList = []Parameter{
 		Shorthand:    "t",
 	},
 	{
-		Name:         "pr-filter",
-		Description:  "Filter projects based on the PR changes (Only for github SCM).",
-		Required:     false,
-		DefaultValue: "true",
+		Name:        "pr-filter",
+		Description: "Filter projects based on the PR changes (Only for github SCM).",
+		Required:    false,
+		Dependencies: DependentParameters{
+			WhenParentParameterIs: "true",
+			ParameterList:         []string{"pull-num", "base-repo-name", "base-repo-owner", "gh-token"}},
+		DefaultValue: "false",
 		Shorthand:    "u",
 	},
 }
@@ -146,7 +155,7 @@ func Init(ccmd *cobra.Command) (err error) {
 		GlobalConfig.Parameters[param.Name] = getFlagOrEnv(ccmd, ParameterList[i].Name,
 			generateEnvVarName(ParameterList[i].Name), ParameterList[i].DefaultValue)
 	}
-	err = CheckRequiredPamameters()
+	err = CheckRequiredParameters(ParameterList)
 	return err
 }
 
@@ -164,18 +173,34 @@ func getFlagOrEnv(ccmd *cobra.Command, flagName, envVar string, defaultValue str
 	}
 }
 
-// CheckRequiredPamameters checks for missing required parameters
-func CheckRequiredPamameters() (err error) {
+func CheckRequiredParameters(parameterList []Parameter) error {
 	missingParams := []string{}
-	for _, param := range ParameterList {
+
+	// Iterate through the list of parameters
+	for _, param := range parameterList {
 		if param.Required && GlobalConfig.Parameters[param.Name] == "" {
 			missingParams = append(missingParams, param.Name)
+		} else if len(param.Dependencies.ParameterList) > 0 {
+			// Check if the parameter has dependent parameters
+			parentValue := GlobalConfig.Parameters[param.Name]
+			expectedParentValue := param.Dependencies.WhenParentParameterIs
+
+			if parentValue == expectedParentValue {
+				// Iterate through the dependent parameters
+				for _, dependentParameter := range param.Dependencies.ParameterList {
+					if GlobalConfig.Parameters[dependentParameter] == "" {
+						missingParams = append(missingParams, dependentParameter)
+					}
+				}
+			}
 		}
 	}
+
+	// Check if any missing parameters were found
 	if len(missingParams) > 0 {
-		err = fmt.Errorf("Missing required parameters: %s", strings.Join(missingParams, ", "))
-		return err
+		return fmt.Errorf("Missing required parameters: %s", strings.Join(missingParams, ", "))
 	}
+
 	return nil
 }
 
