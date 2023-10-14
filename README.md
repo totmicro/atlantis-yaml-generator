@@ -25,43 +25,26 @@ Run the tool using the following command:
 `atlantis-yaml-generator` [flags]
 
 
-**Available Flags:**
---------------------
-
-
--  `--automerge string`: Atlantis automerge config value. (Equivalent envVar: `AUTOMERGE`)
-
--  `-r, --base-repo-name string`: Github Repo Name. (Equivalent envVar: `BASE_REPO_NAME`)
-
--  `-o, --base-repo-owner string`: Github Repo Owner Name. (Equivalent envVar: `BASE_REPO_OWNER`)
-
--  `-x, --excluded-projects string`: Atlantis regex filter to exclude projects. (Equivalent envVar: `EXCLUDED_PROJECTS`)
-
--  `-t, --gh-token string`: Github Token Value. (Equivalent envVar: `GH_TOKEN`)
-
--  `-h, --help`: help for atlantis-yaml-generator
-
--  `-z, --included-projects string`: Atlantis regex filter to only include projects. (Equivalent envVar: `INCLUDED_PROJECTS`)
-
--  `-f, --output-file string`: Atlantis output file name. (Equivalent envVar: `OUTPUT_FILE`)
-
--  `--parallel-apply string`: Atlantis parallel apply config value. (Equivalent envVar: `PARALLEL_APPLY`)
-
--  `--parallel-plan string`: Atlantis parallel plan config value. (Equivalent envVar: `PARALLEL_PLAN`)
-
--  `-q, --pattern-detector string`: discover projects based on files or directories names. (Equivalent envVar: `PATTERN_DETECTOR`)
-
--  `-y, --pr-filter string`: filter projects based on the PR changes (Only for github SCM).. (Equivalent envVar: `PR_FILTER`)
-
--  `-p, --pull-num string`: Github Pull Request Number to check diffs. (Equivalent envVar: `PULL_NUM`)
-
--  `--terraform-base-dir string`: Basedir for terraform resources. (Equivalent envVar: `TERRAFORM_BASE_DIR`)
-
--  `-v, --version`: version for atlantis-yaml-generator
-
--  `-m, --when-modified string`: Atlantis When modified (list of strings) to run autoplan. (Equivalent envVar: `WHEN_MODIFIED`)
-
--  `-w, --workflow string`: Atlantis Workflow to be used. `single-workspace|multi-workspace`. (Equivalent envVar: `WORKFLOW`)
+| Flag                          | Description                                                    | Equivalent envVar   | Default Value |
+| ------------------------------ | -------------------------------------------------------------- | ------------------- | ------------- |
+| `--automerge`          | Atlantis automerge config value.                               | `AUTOMERGE`         | `true`          |
+| `-r, --base-repo-name` | Github Repo Name.                                              | `BASE_REPO_NAME`    |               |
+| `-o, --base-repo-owner`| Github Repo Owner Name.                                        | `BASE_REPO_OWNER`   |               |
+| `-x, --excluded-projects`| Atlantis regex filter to exclude projects.                    | `EXCLUDED_PROJECTS` |               |
+| `-t, --gh-token`       | Github Token Value.                                            | `GH_TOKEN`          |               |
+| `-h, --help`                  | Help for atlantis-yaml-generator.                               |                     |               |
+| `-z, --included-projects`| Atlantis regex filter to only include projects.              | `INCLUDED_PROJECTS` |               |
+| `-f, --output-file`    | Atlantis output file name.                                     | `OUTPUT_FILE`       | `atlantis.yaml`          |
+| `-e, --output-type`    | Atlantis YAML output type [file stdout]                      | `OUTPUT_TYPE`       | `file`          |
+| `--parallel-apply`     | Atlantis parallel apply config value.                         | `PARALLEL_APPLY`    | `true`          |
+| `--parallel-plan`      | Atlantis parallel plan config value.                          | `PARALLEL_PLAN`    | `true`          |
+| `-q, --pattern-detector`| Discover projects based on files or directories names.      | `PATTERN_DETECTOR`  |               |
+| `-y, --pr-filter`      | Filter projects based on the PR changes (Only for github SCM).| `PR_FILTER`       | `false`          |
+| `-p, --pull-num`       | Github Pull Request Number to check diffs.                    | `PULL_NUM`          |               |
+| `--terraform-base-dir` | Basedir for terraform resources.                               | `TERRAFORM_BASE_DIR`| `./`            |
+| `-v, --version`               | Version for atlantis-yaml-generator.                           |                     |               |
+| `-m, --when-modified`  | Atlantis When modified (list of strings) to run autoplan.    | `WHEN_MODIFIED`     | `**/*.tf,**/*.tfvars,**/*.json,**/*.tpl,**/*.tmpl,**/*.xml` |
+| `-w, --workflow`       | Atlantis Workflow to be used.                                | `WORKFLOW`     |          |
 
 
 *Note that default values and required flags are defined in [`config.go`](pkg/config/config.go)*
