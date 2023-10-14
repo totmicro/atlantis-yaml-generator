@@ -5,7 +5,7 @@ provider "aws" {
 
 # Create a simple AWS S3 bucket
 resource "aws_s3_bucket" "example_bucket" {
-  bucket = "my-terraform-hello-world-bucket"
+  bucket = format("%s-%s","my-terraform-hello-world-bucket",var.environment)
 }
 
 # Output the bucket name
