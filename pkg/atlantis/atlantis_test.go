@@ -107,6 +107,12 @@ func TestGenProjectName(t *testing.T) {
 			expectedName: "project-path-test",
 		},
 		{
+			name:         "NonDefaultWorkspace",
+			path:         "project/path/subpath",
+			workspace:    "test",
+			expectedName: "project-path-subpath-test",
+		},
+		{
 			name:         "EmptyPath",
 			path:         "",
 			workspace:    "test",

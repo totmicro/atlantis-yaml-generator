@@ -54,7 +54,7 @@ Run the tool using the following command:
 **Examples**
 ------------
 
-<details><summary>Generate an atlantis.yaml file for a multi workspace workflow</summary>
+<details><summary>Multi workspace workflow</summary>
 
 ```
 # atlantis-yaml-generator -w multi-workspace --pattern-detector workspace_vars -e stdout
@@ -132,7 +132,7 @@ projects:
 ```
 </details>
 
-<details><summary>Generate an atlantis.yaml file for a single workspace workflow</summary>
+<details><summary>Single workspace workflow</summary>
 
 ```
 # atlantis-yaml-generator -w single-workspace -e stdout --pattern-detector main.tf
@@ -157,7 +157,7 @@ projects:
 ```
 </details>
 
-<details><summary>Generate an atlantis.yaml file for a multiple workspace workflow with regex project filtering</summary>
+<details><summary>Multiple workspace workflow with regex project filtering</summary>
 
 ```
 # atlantis-yaml-generator -w multi-workspace -e stdout --pattern-detector workspace_vars --included-projects "(^project_two-staging|production)$"
@@ -209,7 +209,7 @@ projects:
 ```
 </details>
 
-<details><summary>Generate an atlantis.yaml file for a multi workspace workflow with PR filter</summary>
+<details><summary>Multi workspace workflow with PR filter</summary>
 
 ```
 # atlantis-yaml-generator -w multi-workspace --pattern-detector workspace_vars -e stdout --pr-filter true --pull-num 1 --base-repo-name atlantis-yaml-generator --base-repo-owner totmicro --gh-token ghp_xxxx
