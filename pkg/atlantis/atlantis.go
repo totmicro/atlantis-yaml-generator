@@ -28,7 +28,7 @@ type Config struct {
 type Project struct {
 	Name      string `yaml:"name"`
 	Workspace string `yaml:"workspace"`
-	Workflow  string `yaml:"workflow"`
+	Workflow  string `yaml:"workflow,omitempty"`
 	Dir       string `yaml:"dir"`
 	Autoplan  struct {
 		Enabled      bool     `yaml:"enabled"`
@@ -60,7 +60,7 @@ func GenerateAtlantisYAML() error {
 	// Scan folders to detect projects
 	projectFoldersList, err := scanProjectFolders(
 		config.GlobalConfig.Parameters["terraform-base-dir"],
-		config.GlobalConfig.Parameters["workflow"],
+		config.GlobalConfig.Parameters["discovery-mode"],
 		config.GlobalConfig.Parameters["pattern-detector"],
 	)
 	if err != nil {
@@ -75,7 +75,7 @@ func GenerateAtlantisYAML() error {
 	// Detect project workspaces
 	projectFoldersListWithWorkspaces, err := detectProjectWorkspaces(
 		projectFoldersList,
-		config.GlobalConfig.Parameters["workflow"],
+		config.GlobalConfig.Parameters["discovery-mode"],
 		config.GlobalConfig.Parameters["pattern-detector"],
 		prChangedFiles, enablePRFilter)
 	if err != nil {
@@ -120,12 +120,12 @@ func GenerateAtlantisYAML() error {
 	return nil
 }
 
-func scanProjectFolders(basePath, workflow, patternDetector string) (projectFolders []ProjectFolder, err error) {
+func scanProjectFolders(basePath, discoveryMode, patternDetector string) (projectFolders []ProjectFolder, err error) {
 	err = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil {
 			return err
 		}
-		if workflowFilter(info, path, workflow, patternDetector) {
+		if discoveryFilter(info, path, discoveryMode, patternDetector) {
 			relPath, _ := filepath.Rel(basePath, filepath.Dir(path))
 			projectFolders = append(projectFolders, ProjectFolder{Path: relPath})
 		}
@@ -148,15 +148,15 @@ func applyPRFilter(projectFolders []ProjectFolder, changedFiles []string) (filte
 	return filteredProjectFolders, nil
 }
 
-func detectProjectWorkspaces(foldersList []ProjectFolder, workflow string, patternDetector string, changedFiles []string, enablePRfilter bool) (updatedFoldersList []ProjectFolder, err error) {
-	// Detect project workspaces based on the workflow
-	switch workflow {
+func detectProjectWorkspaces(foldersList []ProjectFolder, discoveryMode string, patternDetector string, changedFiles []string, enablePRfilter bool) (updatedFoldersList []ProjectFolder, err error) {
+	// Detect project workspaces based on the discovert mode
+	switch discoveryMode {
 	case "single-workspace":
 		updatedFoldersList, err = singleWorkspaceDetectProjectWorkspaces(foldersList)
 	case "multi-workspace":
 		updatedFoldersList, err = multiWorkspaceDetectProjectWorkspaces(changedFiles, enablePRfilter, foldersList, patternDetector)
 	}
-	// You can add more workflows rules here if required
+	// You can add more discoveryMode rules here if required
 	return updatedFoldersList, err
 }
 
@@ -251,16 +251,16 @@ func generateOutputYAML(config *Config, outputFile string, outputType string) er
 	}
 }
 
-func workflowFilter(info os.FileInfo, path, workflow, patternDetector string) bool {
-	// Detect projects folders based on the workflow
-	// Each workflow has different rules to detect projects
-	switch workflow {
+func discoveryFilter(info os.FileInfo, path, discoveryMode, patternDetector string) bool {
+	// Detect projects folders based on the discovery modes
+	// Each discovery mode has different rules to detect projects
+	switch discoveryMode {
 	case "single-workspace":
-		return singleWorkspaceWorkflowFilter(info, path, patternDetector)
+		return singleWorkspaceDiscoveryFilter(info, path, patternDetector)
 	case "multi-workspace":
-		return multiWorkspaceWorkflowFilter(info, path, patternDetector)
+		return multiWorkspaceDiscoveryFilter(info, path, patternDetector)
 	}
-	// You can add more workflows rules here if required
+	// You can add more discoveryMode rules here if required
 	return true
 }
 

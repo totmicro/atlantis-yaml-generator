@@ -35,7 +35,7 @@ var ParameterList = []Parameter{
 		Name:         "automerge",
 		Description:  "Atlantis automerge config value.",
 		Required:     false,
-		DefaultValue: "true",
+		DefaultValue: "false",
 		Shorthand:    "",
 	},
 	{
@@ -75,8 +75,8 @@ var ParameterList = []Parameter{
 	},
 	{
 		Name:         "workflow",
-		Description:  "Atlantis Workflow to be used. [single-workspace|multi-workspace].",
-		Required:     true,
+		Description:  "Atlantis Workflow to be used.",
+		Required:     false,
 		DefaultValue: "",
 		Shorthand:    "w",
 	},
@@ -104,9 +104,16 @@ var ParameterList = []Parameter{
 	{
 		Name:         "pattern-detector",
 		Description:  "discover projects based on files or directories names.",
-		Required:     true,
-		DefaultValue: "",
+		Required:     false,
+		DefaultValue: "main.tf",
 		Shorthand:    "q",
+	},
+	{
+		Name:         "discovery-mode",
+		Description:  "mode used to discover projects [single-workspace|multi-workspace]",
+		Required:     false,
+		DefaultValue: "single-workspace",
+		Shorthand:    "d",
 	},
 	{
 		Name:         "pull-num",
@@ -142,7 +149,7 @@ var ParameterList = []Parameter{
 		Required:    false,
 		Dependencies: DependentParameters{
 			WhenParentParameterIs: "true",
-			ParameterList:         []string{"pull-num", "base-repo-name", "base-repo-owner", "gh-token"}},
+			ParameterList:         []string{"pull-num", "base-repo-name", "base-repo-owner"}},
 		DefaultValue: "false",
 		Shorthand:    "u",
 	},

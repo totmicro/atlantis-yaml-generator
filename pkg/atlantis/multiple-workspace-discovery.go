@@ -56,7 +56,7 @@ func multiWorkspaceDetectProjectWorkspaces(changedFiles []string, enablePRFilter
 	return foldersList, nil
 }
 
-func multiWorkspaceWorkflowFilter(info os.FileInfo, path, patternDetector string) bool {
+func multiWorkspaceDiscoveryFilter(info os.FileInfo, path, patternDetector string) bool {
 	return info.IsDir() &&
 		info.Name() == patternDetector &&
 		!strings.Contains(path, ".terraform")

@@ -11,7 +11,7 @@ It automates the process of detecting projects within your Terraform codebase, c
 ------------
 
 - Generate `atlantis.yaml` files with ease.
-- Automatically detect projects and workspaces based on your specified workflow.
+- Automatically detect projects and workspaces based on discovery mode rules.
 - Customize configurations such as automerge, parallel plan/apply, and more.
 - Flexible project inclusion and exclusion using regular expressions.
 - Create an Atlantis project by taking into account the files modified in the PR. This approach
@@ -31,6 +31,7 @@ Run the tool using the following command:
 | `-r, --base-repo-name` | Github Repo Name.                                              | `BASE_REPO_NAME`    |               |
 | `-o, --base-repo-owner`| Github Repo Owner Name.                                        | `BASE_REPO_OWNER`   |               |
 | `-x, --excluded-projects`| Atlantis regex filter to exclude projects.                    | `EXCLUDED_PROJECTS` |               |
+| `-d, --discovery-mode`| mode used to discover projects                                  | `DISCOVERY_MODE` | `single-workspace`|
 | `-t, --gh-token`       | Github Token Value.                                            | `GH_TOKEN`          |               |
 | `-h, --help`                  | Help for atlantis-yaml-generator.                               |                     |               |
 | `-z, --included-projects`| Atlantis regex filter to only include projects.              | `INCLUDED_PROJECTS` |               |
@@ -38,8 +39,8 @@ Run the tool using the following command:
 | `-e, --output-type`    | Atlantis YAML output type [file stdout]                      | `OUTPUT_TYPE`       | `file`          |
 | `--parallel-apply`     | Atlantis parallel apply config value.                         | `PARALLEL_APPLY`    | `true`          |
 | `--parallel-plan`      | Atlantis parallel plan config value.                          | `PARALLEL_PLAN`    | `true`          |
-| `-q, --pattern-detector`| Discover projects based on files or directories names.      | `PATTERN_DETECTOR`  |               |
-| `-y, --pr-filter`      | Filter projects based on the PR changes (Only for github SCM).| `PR_FILTER`       | `false`          |
+| `-q, --pattern-detector`| Discover projects based on files or directories names.      | `PATTERN_DETECTOR`  | `main.tf`      |
+| `-u, --pr-filter`      | Filter projects based on the PR changes (Only for github SCM).| `PR_FILTER`       | `false`          |
 | `-p, --pull-num`       | Github Pull Request Number to check diffs.                    | `PULL_NUM`          |               |
 | `--terraform-base-dir` | Basedir for terraform resources.                               | `TERRAFORM_BASE_DIR`| `./`            |
 | `-v, --version`               | Version for atlantis-yaml-generator.                           |                     |               |
@@ -57,7 +58,7 @@ Run the tool using the following command:
 <details><summary>Multi workspace workflow</summary>
 
 ```
-# atlantis-yaml-generator -w multi-workspace --pattern-detector workspace_vars -e stdout
+# atlantis-yaml-generator -d multi-workspace -w myWorkflow --pattern-detector workspace_vars -e stdout
 
 version: 3
 automerge: true
@@ -66,7 +67,7 @@ parallel_plan: true
 projects:
     - name: project_one-dev
       workspace: dev
-      workflow: multi-workspace
+      workflow: myWorkflow
       dir: project_one
       autoplan:
         enabled: true
@@ -79,7 +80,7 @@ projects:
             - '**/*.xml'
     - name: project_one-production
       workspace: production
-      workflow: multi-workspace
+      workflow: myWorkflow
       dir: project_one
       autoplan:
         enabled: true
@@ -92,7 +93,7 @@ projects:
             - '**/*.xml'
     - name: project_one-staging
       workspace: staging
-      workflow: multi-workspace
+      workflow: myWorkflow
       dir: project_one
       autoplan:
         enabled: true
@@ -105,7 +106,7 @@ projects:
             - '**/*.xml'
     - name: project_two-production
       workspace: production
-      workflow: multi-workspace
+      workflow: myWorkflow
       dir: project_two
       autoplan:
         enabled: true
@@ -118,7 +119,7 @@ projects:
             - '**/*.xml'
     - name: project_two-staging
       workspace: staging
-      workflow: multi-workspace
+      workflow: myWorkflow
       dir: project_two
       autoplan:
         enabled: true
@@ -132,10 +133,10 @@ projects:
 ```
 </details>
 
-<details><summary>Single workspace workflow</summary>
+<details><summary>Single workspace discovery mode</summary>
 
 ```
-# atlantis-yaml-generator -w single-workspace -e stdout --pattern-detector main.tf
+# atlantis-yaml-generator -d single-workspace -w myWorkflow -e stdout --pattern-detector main.tf
 
 version: 3
 automerge: true
@@ -144,7 +145,7 @@ parallel_plan: true
 projects:
     - name: project_one
       workspace: default
-      workflow: single-workspace
+      workflow: myWorkflow
       dir: project_one
       autoplan:
         enabled: true
@@ -247,17 +248,17 @@ projects:
 
 -------
 
-**Workflows**
+**Discovery Modes**
 -------------
 
-Currenlty `atlantis-yaml-generator` support 2 workflow types:
+Currenlty `atlantis-yaml-generator` support 2 discovery modes:
 - `single-workspace`: Intended for Terraform configurations that do not utilize multiple workspaces. In this context, the pattern detector parameters establish the criteria for identifying project folders. For instance, if the pattern-detector is set to main.tf (file), and this file is located at database/dev/main.tf, the resulting project would be labeled as database-env. Consequently, Terraform commands would be executed within the database/dev folder.
 - `multiple-workspace`: Intended for Terraform configurations that utilize multiple workspaces. In this context, the pattern detector parameters establish the criteria for identifying project folders. For instance, if the pattern-detector is set to workspace_vars (folder), and there are several files located in this folder, i.e. (database/workspace_vars/dev.tf |database/workspace_vars/staging.tf ), the resulting projects would be labeled as (database-dev|database-staging). Consequently, Terraform commands would be executed within the database folder. Please be aware that in this scenario, the Atlantis workflow requires the use of the -var-file parameter, specifically in the form of -var-file=(workspace_vars/dev.tf|workspace_vars/staging.tf).
 
-If there is the need for additional workflows, they can be easily added at code level. Current code is ready to easily add new workflows, while sharing common actions.
+If there is the need for additional discovery modes, they can be easily added at code level. Current code is ready to easily add new discovery modes, while sharing common actions.
 ```
-func detectProjectWorkspaces(foldersList []ProjectFolder, workflow string, patternDetector string, changedFiles []string) (updatedFoldersList []ProjectFolder, err error) {
-	// Detect project workspaces based on the workflow
+func detectProjectWorkspaces(foldersList []ProjectFolder, discoveryMode string, patternDetector string, changedFiles []string) (updatedFoldersList []ProjectFolder, err error) {
+	// Detect project workspaces based on the discovery mode
 	switch workflow {
 	case "single-workspace":
 		updatedFoldersList, err = singleWorkspaceDetectProjectWorkspaces(foldersList)
@@ -281,7 +282,7 @@ Incorporating this generator into Atlantis requires setting up a [`pre-workflow-
 ```yaml
 pre_workflow_hooks:
   - run: >
-      atlantis-yaml-generator  -w single-workspace --pattern-detector main.tf
+      atlantis-yaml-generator  -d single-workspace -w myWorkflow --pattern-detector main.tf
 ```
 
 Sample output:
@@ -304,7 +305,7 @@ parallel_plan: true
 projects:
     - name: project-one
       workspace: default
-      workflow: single-workspace
+      workflow: myWorkflow
       dir: project/one
       autoplan:
         enabled: true
@@ -317,7 +318,7 @@ projects:
             - '**/*.xml'
     - name: project-two
       workspace: default
-      workflow: single-workspace
+      workflow: myWorkflow
       dir: project/two
       autoplan:
         enabled: true

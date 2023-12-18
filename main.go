@@ -5,9 +5,5 @@ import (
 )
 
 func main() {
-
 	cmd.Init()
 }
-
-// TODO
-// - [ ] Add tests

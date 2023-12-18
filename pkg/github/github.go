@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/google/go-github/github"
-	"github.com/tcnksm/go-gitconfig"
 	"github.com/totmicro/atlantis-yaml-generator/pkg/config"
+	"github.com/totmicro/atlantis-yaml-generator/pkg/helpers"
 	"golang.org/x/oauth2"
 )
 
@@ -51,7 +53,7 @@ func runGHRequest(authToken, owner, repo, pullReqNum string) ([]string, error) {
 // GetChangedFiles gets the parameters to call a ghrequest that returns a list of changed files.
 func GetChangedFiles() (ChangedFiles []string, err error) {
 	// Parse the token from the git config file
-	token, _ := getTokenFromGitConfig()
+	token, _ := getTokenFromGitCredentialsFile()
 	if token == "" {
 		token = config.GlobalConfig.Parameters["gh-token"]
 	}
@@ -71,12 +73,23 @@ func GetChangedFiles() (ChangedFiles []string, err error) {
 	return prChangedFiles, err
 }
 
-func getTokenFromGitConfig() (string, error) {
-	url, err := gitconfig.Local("remote.origin.url")
+func getTokenFromGitCredentialsFile() (string, error) {
+	// Get the current user
+	usr, err := user.Current()
 	if err != nil {
-		return "", fmt.Errorf("token not found in the [remote \"origin\"] block")
+		return "", err
 	}
-	token, err := extractTokenFromURL(url)
+
+	// Construct the path to the .git-credentials file
+	credentialsFilePath := filepath.Join(usr.HomeDir, ".git-credentials")
+
+	// ReadFile credentials file
+	file, err := helpers.ReadFile(credentialsFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	token, err := extractTokenFromURL(file)
 	return token, err
 }
 
@@ -94,5 +107,4 @@ func extractTokenFromURL(urlLine string) (string, error) {
 	}
 
 	return "", fmt.Errorf("token not found in url line")
-
 }

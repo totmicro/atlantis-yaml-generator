@@ -1,1 +1,1 @@
-atlantis-yaml-generator -e stdout -w single-workspace --pattern-detector main.tf
+atlantis-yaml-generator -e stdout -d single-workspace -w workflow1 --pattern-detector main.tf

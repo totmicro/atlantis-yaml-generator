@@ -256,7 +256,7 @@ func TestGenerateAtlantisProjects(t *testing.T) {
 			WorkspaceList: []string{"dev", "prod"},
 		},
 	}
-
+	//TODO: improve test to better test workflow
 	workflow := "myWorkflow"
 
 	expectedProjects := []Project{
@@ -351,14 +351,14 @@ func TestApplyPRFilter(t *testing.T) {
 func TestScanProjectFolders(t *testing.T) {
 	tests := []struct {
 		basePath              string
-		workflow              string
+		discoveryMode         string
 		patternDetector       string
 		expectedProjectFolder []ProjectFolder
 		expectedError         bool
 	}{
 		{
 			basePath:        "mockproject",
-			workflow:        "multi-workspace",
+			discoveryMode:   "multi-workspace",
 			patternDetector: "workspace_vars",
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "multiworkspace"},
@@ -367,7 +367,7 @@ func TestScanProjectFolders(t *testing.T) {
 		},
 		{
 			basePath:        "mockproject",
-			workflow:        "single-workspace",
+			discoveryMode:   "single-workspace",
 			patternDetector: "main.tf",
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "singleworkspace"},
@@ -376,7 +376,7 @@ func TestScanProjectFolders(t *testing.T) {
 		},
 		{
 			basePath:        "invalidpath", // Invalid path to check file walk error
-			workflow:        "single-workspace",
+			discoveryMode:   "single-workspace",
 			patternDetector: "main.tf",
 			expectedProjectFolder: []ProjectFolder{
 				{Path: "singleworkspace"},
@@ -386,8 +386,8 @@ func TestScanProjectFolders(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.workflow, func(t *testing.T) {
-			projectFolders, err := scanProjectFolders(test.basePath, test.workflow, test.patternDetector)
+		t.Run(test.discoveryMode, func(t *testing.T) {
+			projectFolders, err := scanProjectFolders(test.basePath, test.discoveryMode, test.patternDetector)
 			if test.expectedError {
 				assert.Error(t, err)
 			} else {
@@ -457,39 +457,39 @@ func TestProjectFilter(t *testing.T) {
 	}
 }
 
-func TestWorkflowFilter(t *testing.T) {
+func TestDiscoveryFilter(t *testing.T) {
 	tests := []struct {
 		name            string
 		path            string
-		workflow        string
+		discoveryMode   string
 		patternDetector string
 		expectedResult  bool
 	}{
 		{
 			name:            "single-workspace-true",
 			path:            "mockproject/singleworkspace/main.tf",
-			workflow:        "single-workspace",
+			discoveryMode:   "single-workspace",
 			patternDetector: "main.tf",
 			expectedResult:  true,
 		},
 		{
 			name:            "single-workspace-false",
 			path:            "mockproject/singleworkspace/dummy.tf",
-			workflow:        "single-workspace",
+			discoveryMode:   "single-workspace",
 			patternDetector: "main.tf",
 			expectedResult:  false,
 		},
 		{
 			name:            "multi-workspace",
 			path:            "mockproject/multiworkspace/workspace_vars",
-			workflow:        "multi-workspace",
+			discoveryMode:   "multi-workspace",
 			patternDetector: "workspace_vars",
 			expectedResult:  true,
 		},
 		{
-			name:            "undefined-workflow",
+			name:            "undefined-mode",
 			path:            "mockproject/multiworkspace/workspace_vars",
-			workflow:        "",
+			discoveryMode:   "",
 			patternDetector: "",
 			expectedResult:  true,
 		},
@@ -501,7 +501,7 @@ func TestWorkflowFilter(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			info, err := os.Stat(test.path)
 			if err == nil {
-				result := workflowFilter(info, test.path, test.workflow, test.patternDetector)
+				result := discoveryFilter(info, test.path, test.discoveryMode, test.patternDetector)
 				assert.Equal(t, test.expectedResult, result)
 			} else {
 				assert.Error(t, err)
@@ -514,7 +514,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 	tests := []struct {
 		name                string
 		foldersList         []ProjectFolder
-		workflow            string
+		discoveryMode       string
 		patternDetector     string
 		changedFiles        []string
 		enablePRFilter      bool
@@ -524,7 +524,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 		{
 			name:            "single-workspace",
 			foldersList:     []ProjectFolder{{Path: "mockproject/singleworkspace"}},
-			workflow:        "single-workspace",
+			discoveryMode:   "single-workspace",
 			patternDetector: "main.tf",
 			changedFiles:    []string{"mockproject/singleworkspace/main.tf"},
 			enablePRFilter:  true,
@@ -536,7 +536,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 		{
 			name:            "single-workspace",
 			foldersList:     []ProjectFolder{{Path: "mockproject/singleworkspace"}, {Path: "mockproject/singleworkspace2"}},
-			workflow:        "single-workspace",
+			discoveryMode:   "single-workspace",
 			patternDetector: "main.tf",
 			changedFiles:    []string{"mockproject/singleworkspace/main.tf"},
 			enablePRFilter:  false,
@@ -549,7 +549,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 		{
 			name:            "multi-workspace-invalid-path",
 			foldersList:     []ProjectFolder{{Path: "invalidpath"}},
-			workflow:        "multi-workspace",
+			discoveryMode:   "multi-workspace",
 			patternDetector: "workspace_vard",
 			changedFiles:    []string{"invalid/workspace_vars/test1.tfvars"},
 			enablePRFilter:  true,
@@ -561,7 +561,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 		{
 			name:            "multi-workspace",
 			foldersList:     []ProjectFolder{{Path: "mockproject/multiworkspace"}},
-			workflow:        "multi-workspace",
+			discoveryMode:   "multi-workspace",
 			patternDetector: "workspace_vars",
 			changedFiles:    []string{"mockproject/multiworkspace/workspace_vars/test1.tfvars"},
 			enablePRFilter:  true,
@@ -576,7 +576,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 		{
 			name:            "multi-workspace",
 			foldersList:     []ProjectFolder{{Path: "mockproject/multiworkspace"}, {Path: "mockproject/multiworkspace2"}},
-			workflow:        "multi-workspace",
+			discoveryMode:   "multi-workspace",
 			patternDetector: "workspace_vars",
 			changedFiles: []string{"mockproject/multiworkspace/workspace_vars/test1.tfvars",
 				"mockproject/multiworkspace2/workspace_vars/test2.tfvars",
@@ -597,7 +597,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 		{
 			name:            "multi-workspace",
 			foldersList:     []ProjectFolder{{Path: "mockproject/multiworkspace"}, {Path: "mockproject/multiworkspace2"}},
-			workflow:        "multi-workspace",
+			discoveryMode:   "multi-workspace",
 			patternDetector: "workspace_vars",
 			changedFiles: []string{"mockproject/multiworkspace/workspace_vars/test1.tfvars",
 				"mockproject/multiworkspace2/workspace_vars/test2.tfvars",
@@ -620,7 +620,7 @@ func TestDetectProjectWorkspaces(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			updatedFoldersList, err := detectProjectWorkspaces(test.foldersList, test.workflow, test.patternDetector, test.changedFiles, test.enablePRFilter)
+			updatedFoldersList, err := detectProjectWorkspaces(test.foldersList, test.discoveryMode, test.patternDetector, test.changedFiles, test.enablePRFilter)
 			if test.expectedErr {
 				assert.Error(t, err)
 			} else {
@@ -693,7 +693,8 @@ func TestGenerateAtlantisYAML(t *testing.T) {
 	config.GlobalConfig.Parameters["base-repo-owner"] = "test-owner"
 	config.GlobalConfig.Parameters["base-repo-name"] = "test-repo"
 	config.GlobalConfig.Parameters["pull-num"] = "55"
-	config.GlobalConfig.Parameters["workflow"] = "single-workspace"
+	config.GlobalConfig.Parameters["workflow"] = "workflow1"
+	config.GlobalConfig.Parameters["discoveryMode"] = "single-workspace"
 	config.GlobalConfig.Parameters["pattern-detector"] = "main.tf"
 	config.GlobalConfig.Parameters["terraform-base-dir"] = "mockproject"
 	config.GlobalConfig.Parameters["output-file"] = tempFile
