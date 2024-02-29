@@ -41,6 +41,11 @@ type ProjectFolder struct {
 	WorkspaceList []string
 }
 
+func (pf ProjectFolder) Hash() string {
+	// Implement a unique string generation based on the content of atlantis.ProjectFolder
+	return fmt.Sprintf("%s", pf.Path)
+}
+
 // GenerateAtlantisYAML generates the atlantis.yaml file
 func GenerateAtlantisYAML() error {
 
@@ -121,17 +126,21 @@ func GenerateAtlantisYAML() error {
 }
 
 func scanProjectFolders(basePath, discoveryMode, patternDetector string) (projectFolders []ProjectFolder, err error) {
+	uniques := helpers.NewSet()
 	err = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil {
 			return err
 		}
 		if discoveryFilter(info, path, discoveryMode, patternDetector) {
 			relPath, _ := filepath.Rel(basePath, filepath.Dir(path))
-			projectFolders = append(projectFolders, ProjectFolder{Path: relPath})
+			uniques.Add(ProjectFolder{Path: relPath})
 		}
 		return nil
 	})
 
+	for _, projectFolder := range uniques.Elements {
+		projectFolders = append(projectFolders, projectFolder.(ProjectFolder))
+	}
 	return projectFolders, err
 }
 
