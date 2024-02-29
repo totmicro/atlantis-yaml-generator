@@ -3,6 +3,7 @@ package helpers
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -50,4 +51,14 @@ func ReadFile(filename string) (string, error) {
 	content := make([]byte, stat.Size())
 	_, err = file.Read(content)
 	return string(content), err
+}
+
+// MatchesPattern checks if the given string matches the specified regex pattern.
+// It returns true if the pattern matches the string, and false otherwise.
+func MatchesPattern(pattern string, str string) bool {
+	matched, err := regexp.MatchString(pattern, str)
+	if err != nil {
+		return false
+	}
+	return matched
 }

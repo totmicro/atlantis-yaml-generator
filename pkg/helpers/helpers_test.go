@@ -175,3 +175,25 @@ func TestReadFile_ReadError(t *testing.T) {
 	_, err = ReadFile(tempFile.Name())
 	assert.Error(t, err) // Check that an error is returned
 }
+
+func TestMatchesPattern(t *testing.T) {
+	tests := []struct {
+		pattern string
+		str     string
+		want    bool
+	}{
+		{"workspace_vars", "workspace_vars", true},
+		{"main.tf", "main.tf", true},
+		{".*\\.tf", "main.tf", true},
+		{".*\\.tf", "vpc.tf", true},
+		{"^a.*z$", "alphabet", false}, // Negative test case
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			if got := MatchesPattern(tt.pattern, tt.str); got != tt.want {
+				t.Errorf("MatchesPattern(%q, %q) = %v, want %v", tt.pattern, tt.str, got, tt.want)
+			}
+		})
+	}
+}
