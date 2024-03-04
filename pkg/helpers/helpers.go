@@ -63,7 +63,8 @@ func MatchesPattern(pattern string, str string) bool {
 	return matched
 }
 
-// Set data structure, using map as the underlying storage
+// Set data structure
+// Keys are strings and elements must implement Hashable to calculate keys.
 type Set struct {
 	Elements map[string]Hashable
 }
@@ -108,6 +109,11 @@ func (s *Set) List() []Hashable {
 	return list
 }
 
+// Enables use of Set by requiring its elements to be hashable.
 type Hashable interface {
 	Hash() string
+}
+
+type Walkable interface {
+	Walk(root string, walkFn filepath.WalkFunc) error
 }

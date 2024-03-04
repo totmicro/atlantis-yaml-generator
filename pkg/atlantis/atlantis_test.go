@@ -1,15 +1,15 @@
 package atlantis
 
 import (
-	"os"
-	"path/filepath"
-	"reflect"
-	"testing"
-
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/totmicro/atlantis-yaml-generator/pkg/config"
 	"github.com/totmicro/atlantis-yaml-generator/pkg/helpers"
 	"gopkg.in/yaml.v3"
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
 )
 
 func TestApplyProjectFilter(t *testing.T) {
@@ -387,7 +387,11 @@ func TestScanProjectFolders(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.discoveryMode, func(t *testing.T) {
-			projectFolders, err := scanProjectFolders(test.basePath, test.discoveryMode, test.patternDetector)
+			projectFolders, err := scanProjectFolders(
+				OSFileSystem{},
+				test.basePath,
+				test.discoveryMode,
+				test.patternDetector)
 			if test.expectedError {
 				assert.Error(t, err)
 			} else {
@@ -719,4 +723,28 @@ func TestGenerateAtlantisYAML(t *testing.T) {
 	err = GenerateAtlantisYAML()
 	assert.NoError(t, err)
 
+}
+
+// Tests multiple project hits returns unique projects only.
+// e.g. if we scan for *.tf the same project isn't hit twice.
+func TestScanProjectFoldersUniques(t *testing.T) {
+	memFS := afero.NewMemMapFs()
+	fs := afero.Afero{Fs: memFS}
+	// Create directories and files
+	// project3 has multiple hits
+	afero.WriteFile(fs, "projects_root/project1/main.tf", []byte("content"), 0644)
+	afero.WriteFile(fs, "projects_root/project2/main.tf", []byte("content"), 0644)
+	afero.WriteFile(fs, "projects_root/project3/main.tf", []byte("content"), 0644)
+	afero.WriteFile(fs, "projects_root/project3/outputs.tf", []byte("content"), 0644)
+
+	// Use the fs (implementing Walkable) to call scanProjectFolders
+	projectFolders, err := scanProjectFolders(fs, "projects_root", "single-workspace", `.*\.tf`)
+	if err != nil {
+		t.Errorf("scanProjectFolders returned an error: %v", err)
+	}
+
+	// Verify that 3 project folders were returned
+	if len(projectFolders) != 3 {
+		t.Errorf("Expected 3 project folders, got %d. Projects %v", len(projectFolders), projectFolders)
+	}
 }
