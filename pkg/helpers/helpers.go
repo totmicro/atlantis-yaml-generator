@@ -3,6 +3,7 @@ package helpers
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -50,4 +51,69 @@ func ReadFile(filename string) (string, error) {
 	content := make([]byte, stat.Size())
 	_, err = file.Read(content)
 	return string(content), err
+}
+
+// MatchesPattern checks if the given string matches the specified regex pattern.
+// It returns true if the pattern matches the string, and false otherwise.
+func MatchesPattern(pattern string, str string) bool {
+	matched, err := regexp.MatchString(pattern, str)
+	if err != nil {
+		return false
+	}
+	return matched
+}
+
+// Set data structure
+// Keys are strings and elements must implement Hashable to calculate keys.
+type Set struct {
+	Elements map[string]Hashable
+}
+
+// NewSet creates a new Set
+func NewSet() *Set {
+	return &Set{
+		Elements: make(map[string]Hashable),
+	}
+}
+
+// Add adds an element to the set
+func (s *Set) Add(element Hashable) {
+	key := element.Hash()
+	s.Elements[key] = element
+}
+
+// Remove removes an element from the set
+func (s *Set) Remove(element Hashable) {
+	key := element.Hash()
+	delete(s.Elements, key)
+}
+
+// Contains checks if an element is in the set
+func (s *Set) Contains(element Hashable) bool {
+	key := element.Hash()
+	_, exists := s.Elements[key]
+	return exists
+}
+
+// Size returns the number of Elements in the set
+func (s *Set) Size() int {
+	return len(s.Elements)
+}
+
+// List returns all the Elements in the set
+func (s *Set) List() []Hashable {
+	list := make([]Hashable, 0, len(s.Elements))
+	for _, element := range s.Elements {
+		list = append(list, element)
+	}
+	return list
+}
+
+// Enables use of Set by requiring its elements to be hashable.
+type Hashable interface {
+	Hash() string
+}
+
+type Walkable interface {
+	Walk(root string, walkFn filepath.WalkFunc) error
 }

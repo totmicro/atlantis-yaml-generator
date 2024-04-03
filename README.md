@@ -39,7 +39,7 @@ Run the tool using the following command:
 | `-e, --output-type`    | Atlantis YAML output type [file stdout]                      | `OUTPUT_TYPE`       | `file`          |
 | `--parallel-apply`     | Atlantis parallel apply config value.                         | `PARALLEL_APPLY`    | `true`          |
 | `--parallel-plan`      | Atlantis parallel plan config value.                          | `PARALLEL_PLAN`    | `true`          |
-| `-q, --pattern-detector`| Discover projects based on files or directories names.      | `PATTERN_DETECTOR`  | `main.tf`      |
+| `-q, --pattern-detector`| Discover projects based on files, directories names or regex.      | `PATTERN_DETECTOR`  | `main.tf`      |
 | `-u, --pr-filter`      | Filter projects based on the PR changes (Only for github SCM).| `PR_FILTER`       | `false`          |
 | `-p, --pull-num`       | Github Pull Request Number to check diffs.                    | `PULL_NUM`          |               |
 | `--terraform-base-dir` | Basedir for terraform resources.                               | `TERRAFORM_BASE_DIR`| `./`            |

@@ -3,6 +3,7 @@ package helpers
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -174,4 +175,80 @@ func TestReadFile_ReadError(t *testing.T) {
 	// Call the function and test the logic
 	_, err = ReadFile(tempFile.Name())
 	assert.Error(t, err) // Check that an error is returned
+}
+
+func TestMatchesPattern(t *testing.T) {
+	tests := []struct {
+		pattern string
+		str     string
+		want    bool
+	}{
+		{"workspace_vars", "workspace_vars", true},
+		{"main.tf", "main.tf", true},
+		{".*\\.tf", "main.tf", true},
+		{".*\\.tf", "vpc.tf", true},
+		{"^a.*z$", "alphabet", false}, // Negative test case
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			if got := MatchesPattern(tt.pattern, tt.str); got != tt.want {
+				t.Errorf("MatchesPattern(%q, %q) = %v, want %v", tt.pattern, tt.str, got, tt.want)
+			}
+		})
+	}
+}
+
+// HashableString is a simple Hashable type for testing.
+type HashableString string
+
+func (h HashableString) Hash() string {
+	return string(h)
+}
+
+func TestNewSet(t *testing.T) {
+	s := NewSet()
+	if s == nil || len(s.Elements) != 0 {
+		t.Errorf("NewSet() = %v, want a new Set instance with empty Elements", s)
+	}
+}
+
+func TestAddAndContains(t *testing.T) {
+	s := NewSet()
+	element := HashableString("test")
+	s.Add(element)
+	if !s.Contains(element) {
+		t.Errorf("Set does not contain element %v after Add", element)
+	}
+}
+
+func TestRemove(t *testing.T) {
+	s := NewSet()
+	element := HashableString("test")
+	s.Add(element)
+	s.Remove(element)
+	if s.Contains(element) {
+		t.Errorf("Set contains element %v after Remove", element)
+	}
+}
+
+func TestSize(t *testing.T) {
+	s := NewSet()
+	s.Add(HashableString("one"))
+	s.Add(HashableString("two"))
+	if s.Size() != 2 {
+		t.Errorf("Size() = %d, want 2", s.Size())
+	}
+}
+
+func TestList(t *testing.T) {
+	s := NewSet()
+	elements := []Hashable{HashableString("one"), HashableString("two")}
+	for _, e := range elements {
+		s.Add(e)
+	}
+	list := s.List()
+	if !reflect.DeepEqual(list, elements) && len(list) == len(elements) {
+		t.Errorf("List() = %v, want %v", list, elements)
+	}
 }

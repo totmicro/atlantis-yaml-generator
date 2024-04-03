@@ -2,7 +2,10 @@ module github.com/totmicro/atlantis-yaml-generator
 
 go 1.21
 
-require github.com/google/go-github v17.0.0+incompatible
+require (
+	github.com/google/go-github v17.0.0+incompatible
+	github.com/spf13/afero v1.11.0
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -13,6 +16,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
