@@ -1,14 +1,13 @@
 package atlantis
 
 import (
-	"github.com/totmicro/atlantis-yaml-generator/pkg/helpers"
 	"os"
 	"strings"
 )
 
 func singleWorkspaceDiscoveryFilter(info os.FileInfo, path, patternDetector string) bool {
 	return !info.IsDir() &&
-		helpers.MatchesPattern(patternDetector, info.Name()) &&
+		info.Name() == patternDetector &&
 		!strings.Contains(path, ".terraform")
 }
 

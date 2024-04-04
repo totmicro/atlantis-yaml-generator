@@ -41,17 +41,6 @@ type ProjectFolder struct {
 	WorkspaceList []string
 }
 
-func (pf ProjectFolder) Hash() string {
-	// Implement a unique string generation based on the content of atlantis.ProjectFolder
-	return fmt.Sprintf("%s", pf.Path)
-}
-
-type OSFileSystem struct{}
-
-func (OSFileSystem) Walk(root string, walkFn filepath.WalkFunc) error {
-	return filepath.Walk(root, walkFn)
-}
-
 // GenerateAtlantisYAML generates the atlantis.yaml file
 func GenerateAtlantisYAML() error {
 
@@ -70,7 +59,6 @@ func GenerateAtlantisYAML() error {
 
 	// Scan folders to detect projects
 	projectFoldersList, err := scanProjectFolders(
-		OSFileSystem{},
 		config.GlobalConfig.Parameters["terraform-base-dir"],
 		config.GlobalConfig.Parameters["discovery-mode"],
 		config.GlobalConfig.Parameters["pattern-detector"],
@@ -132,23 +120,18 @@ func GenerateAtlantisYAML() error {
 	return nil
 }
 
-// Scans a folder for projects and returns a list of unique projects.
-func scanProjectFolders(filesystem helpers.Walkable, basePath, discoveryMode, patternDetector string) (projectFolders []ProjectFolder, err error) {
-	uniques := helpers.NewSet()
-	err = filesystem.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+func scanProjectFolders(basePath, discoveryMode, patternDetector string) (projectFolders []ProjectFolder, err error) {
+	err = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil {
 			return err
 		}
 		if discoveryFilter(info, path, discoveryMode, patternDetector) {
 			relPath, _ := filepath.Rel(basePath, filepath.Dir(path))
-			uniques.Add(ProjectFolder{Path: relPath})
+			projectFolders = append(projectFolders, ProjectFolder{Path: relPath})
 		}
 		return nil
 	})
 
-	for _, projectFolder := range uniques.Elements {
-		projectFolders = append(projectFolders, projectFolder.(ProjectFolder))
-	}
 	return projectFolders, err
 }
 

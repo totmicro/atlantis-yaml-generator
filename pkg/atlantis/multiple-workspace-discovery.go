@@ -12,7 +12,7 @@ import (
 func multiWorkspaceGetProjectScope(relPath, patternDetector string, changedFiles []string) string {
 	for _, file := range changedFiles {
 		if strings.HasPrefix(file, fmt.Sprintf("%s/", relPath)) &&
-			!helpers.MatchesPattern(patternDetector, file) {
+			!strings.Contains(file, patternDetector) {
 			return "crossWorkspace"
 		}
 	}
@@ -58,6 +58,6 @@ func multiWorkspaceDetectProjectWorkspaces(changedFiles []string, enablePRFilter
 
 func multiWorkspaceDiscoveryFilter(info os.FileInfo, path, patternDetector string) bool {
 	return info.IsDir() &&
-		helpers.MatchesPattern(patternDetector, info.Name()) &&
+		info.Name() == patternDetector &&
 		!strings.Contains(path, ".terraform")
 }

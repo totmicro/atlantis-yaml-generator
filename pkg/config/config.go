@@ -103,7 +103,7 @@ var ParameterList = []Parameter{
 	},
 	{
 		Name:         "pattern-detector",
-		Description:  "discover projects based on files, directories names or regex.",
+		Description:  "discover projects based on files or directories names.",
 		Required:     false,
 		DefaultValue: "main.tf",
 		Shorthand:    "q",
